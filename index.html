@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ふたり用 ToDo リスト</title>
+  <style>
+    :root {
+      color-scheme: dark light;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #111;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 0.8rem 1rem;
+      background: #222;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    }
+    header h1 {
+      font-size: 1.1rem;
+      margin: 0;
+    }
+    main {
+      flex: 1;
+      max-width: 640px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    #status {
+      font-size: 0.8rem;
+      opacity: 0.8;
+      margin: 0.2rem 0 0.8rem;
+    }
+    form {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 0.6rem 0.8rem;
+      border-radius: 999px;
+      border: 1px solid #444;
+      background: #181818;
+      color: #eee;
+      font-size: 0.95rem;
+      box-sizing: border-box;
+    }
+    input[type="text"]::placeholder {
+      color: #777;
+    }
+    button {
+      padding: 0.6rem 0.9rem;
+      border-radius: 999px;
+      border: none;
+      background: #3b82f6;
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button:active {
+      transform: translateY(1px);
+      filter: brightness(0.9);
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 0.6rem;
+      border-radius: 0.6rem;
+      background: #181818;
+      border: 1px solid #262626;
+    }
+    .todo-item span {
+      flex: 1;
+      font-size: 0.9rem;
+      word-break: break-all;
+    }
+    .todo-item span.done {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+    .todo-item button {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.75rem;
+      background: #dc2626;
+    }
+    .todo-item input[type="checkbox"] {
+      width: 1rem;
+      height: 1rem;
+    }
+    @media (min-width: 768px) {
+      header h1 {
+        font-size: 1.2rem;
+      }
+      main {
+        padding-top: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ふたり用 ToDo リスト</h1>
+  </header>
+  <main>
+    <p id="status">Firebase に接続しています...</p>
+    <form id="todo-form">
+      <input id="todo-input" type="text" placeholder="やることを入力して Enter / 追加" autocomplete="off" required />
+      <button type="submit">追加</button>
+    </form>
+    <ul id="todo-list"></ul>
+  </main>
+
+  <!-- Firebase JS SDK (CDN, v12) -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
+    import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js';
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp,
+      query,
+      orderBy,
+      onSnapshot,
+      doc,
+      updateDoc,
+      deleteDoc
+    } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
+
+    // ▼▼ ここをあなたの Firebase 設定で書き換える ▼▼
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID"
+      // 必要なら他の項目も追加（databaseURL, storageBucket など）
+    };
+    // ▲▲ ここまで ▲▲
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const todosCol = collection(db, 'todos');
+
+    const statusEl = document.getElementById('status');
+    const form = document.getElementById('todo-form');
+    const input = document.getElementById('todo-input');
+    const list = document.getElementById('todo-list');
+
+    // 匿名ログイン
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        statusEl.textContent = '匿名ログイン中...';
+        try {
+          await signInAnonymously(auth);
+        } catch (e) {
+          console.error(e);
+          statusEl.textContent = 'ログインエラー: ' + e.message;
+          return;
+        }
+        return;
+      }
+
+      statusEl.textContent = '匿名ユーザーとして接続中';
+
+      // todos コレクションのリアルタイム購読
+      const q = query(todosCol, orderBy('createdAt'));
+      onSnapshot(q, (snapshot) => {
+        list.innerHTML = '';
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const li = document.createElement('li');
+          li.className = 'todo-item';
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.checked = !!data.done;
+
+          const span = document.createElement('span');
+          span.textContent = data.text || '';
+          if (data.done) span.classList.add('done');
+
+          const delBtn = document.createElement('button');
+          delBtn.textContent = '削除';
+
+          checkbox.addEventListener('change', () => {
+            updateDoc(doc(todosCol, docSnap.id), { done: checkbox.checked });
+          });
+
+          delBtn.addEventListener('click', () => {
+            deleteDoc(doc(todosCol, docSnap.id));
+          });
+
+          li.appendChild(checkbox);
+          li.appendChild(span);
+          li.appendChild(delBtn);
+          list.appendChild(li);
+        });
+      });
+    });
+
+    // 追加
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      try {
+        await addDoc(todosCol, {
+          text,
+          done: false,
+          createdAt: serverTimestamp()
+        });
+        input.value = '';
+        input.focus();
+      } catch (e) {
+        console.error(e);
+        alert('追加に失敗しました: ' + e.message);
+      }
+    });
+  </script>
+</body>
+</html>
