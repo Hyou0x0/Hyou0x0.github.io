@@ -1,27 +1,28 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <!-- PWA manifest -->
-<link rel="manifest" href="/manifest.webmanifest">
-
-<!-- アプリ風の表示 -->
-<meta name="theme-color" content="#111111">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="ふたりToDo">
-
-<!-- iOSホーム画面アイコン -->
-<link rel="apple-touch-icon" href="/icons/icon-192.png">
-
-<!-- ノッチまで使う（iPhone） -->
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ふたり用 ToDo リスト</title>
+
+  <!-- PWA manifest（ホーム画面追加でアプリ風） -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#111111">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ふたりToDo">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
   <style>
     :root { color-scheme: dark light; }
 
+    /* 横幅固定 & 横スワイプ無効化 */
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      overscroll-behavior-x: none;
+    }
     body{
       margin:0;
       font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
@@ -30,7 +31,9 @@
       min-height:100vh;
       display:flex;
       flex-direction:column;
+      touch-action: pan-y;
     }
+
     header{
       padding:.8rem 1rem;
       background:#222;
@@ -43,8 +46,8 @@
 
     main{
       flex:1;
-      max-width:640px;
       width:100%;
+      max-width:100%;
       margin:0 auto;
       padding:1rem;
       box-sizing:border-box;
@@ -55,7 +58,7 @@
       margin:.2rem 0 .8rem;
     }
 
-    /* 名前入力ボックス */
+    /* 名前選択ボックス */
     .name-box{
       display:flex;
       gap:.5rem;
@@ -66,21 +69,18 @@
       padding:.6rem .7rem;
       margin-bottom:.8rem;
     }
-    .name-box label{
+    .name-box .label{
       font-size:.85rem;
       opacity:.85;
       white-space:nowrap;
     }
-    .name-box input{
+    .name-choices{
+      display:flex;
+      gap:.5rem;
       flex:1;
-      padding:.5rem .7rem;
-      border-radius:999px;
-      border:1px solid #444;
-      background:#111;
-      color:#eee;
-      font-size:.9rem;
+      justify-content:flex-end;
     }
-    .name-box button{
+    .name-btn{
       padding:.5rem .8rem;
       border-radius:999px;
       border:none;
@@ -137,6 +137,8 @@
       display:flex;
       flex-direction:column;
       gap:.4rem;
+      width:100%;
+      box-sizing:border-box;
     }
 
     .todo-item{
@@ -147,10 +149,13 @@
       border-radius:.6rem;
       background:#181818;
       border:1px solid #262626;
-      touch-action: pan-y; /* 縦スクロールと即ドラッグの共存 */
+      width:100%;
+      box-sizing:border-box;
+      touch-action: pan-y;
     }
     .todo-item .text{
       flex:1;
+      min-width:0;
       font-size:.9rem;
       word-break:break-all;
       display:flex;
@@ -170,7 +175,6 @@
       border:1px solid #333;
       white-space:nowrap;
     }
-
     .todo-item button{
       padding:.3rem .6rem;
       font-size:.75rem;
@@ -197,14 +201,16 @@
   <main>
     <p id="status">Firebase に接続しています...</p>
 
-    <!-- 名前入力（端末ごとに一度だけ） -->
+    <!-- 名前選択（端末ごとに一度だけ） -->
     <div id="nameBox" class="name-box" style="display:none;">
-      <label>あなたの名前</label>
-      <input id="nameInput" type="text" placeholder="まさぴ / ゆなぴ" />
-      <button id="nameSave">保存</button>
+      <div class="label">あなたは？</div>
+      <div class="name-choices">
+        <button class="name-btn" data-name="まさぴ">まさぴ</button>
+        <button class="name-btn" data-name="ゆなぴ">ゆなぴ</button>
+      </div>
     </div>
     <p id="nameHint" class="name-hint" style="display:none;">
-      ※この端末から追加したToDoに名前が付きます（いつでも変更OK）
+      ※この端末から追加したToDoに名前が付きます
     </p>
 
     <form id="todo-form">
@@ -216,7 +222,7 @@
     <ul id="todo-list"></ul>
   </main>
 
-  <!-- SortableJS（即ドラッグOKな並び替え） -->
+  <!-- SortableJS（即ドラッグで並び替え） -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
   <!-- Firebase / App -->
@@ -252,18 +258,43 @@
     const list = document.getElementById('todo-list');
 
     const nameBox = document.getElementById('nameBox');
-    const nameInput = document.getElementById('nameInput');
-    const nameSave = document.getElementById('nameSave');
     const nameHint = document.getElementById('nameHint');
+    const nameButtons = Array.from(nameBox.querySelectorAll('.name-btn'));
 
     const NAME_KEY = "todoDisplayName";
     let displayName = localStorage.getItem(NAME_KEY) || "";
     let currentUser = null;
     let sortable = null;
+    let isSorting = false; // 並び替え中ガード
+    let latestTodos = [];  // 次のorder計算用に保持
 
     function lockTodoUI(lock){
       input.disabled = lock;
       form.querySelector('button[type="submit"]').disabled = lock;
+    }
+
+    function pickNameUI(uid){
+      nameBox.style.display = "flex";
+      nameHint.style.display = "block";
+      lockTodoUI(true);
+
+      nameButtons.forEach(btn => {
+        btn.onclick = async () => {
+          const v = btn.dataset.name;
+          displayName = v;
+          localStorage.setItem(NAME_KEY, displayName);
+
+          await setDoc(doc(db, "users", uid), {
+            name: displayName,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+
+          nameBox.style.display = "none";
+          nameHint.style.display = "none";
+          statusEl.textContent = `接続中: ${displayName}`;
+          lockTodoUI(false);
+        };
+      });
     }
 
     async function ensureDisplayName(uid){
@@ -278,7 +309,7 @@
         return;
       }
 
-      // Firestore users/{uid} に名前があれば拾う
+      // Firestore users/{uid} に名前があれば拾う（同じ端末復帰用）
       try{
         const uref = doc(db, "users", uid);
         const usnap = await getDoc(uref);
@@ -293,27 +324,19 @@
         console.warn("users read failed:", e);
       }
 
-      // 無ければ入力させる
-      nameBox.style.display = "flex";
-      nameHint.style.display = "block";
-      lockTodoUI(true);
+      // 無ければ選択UI
+      pickNameUI(uid);
+    }
 
-      nameSave.onclick = async () => {
-        const v = nameInput.value.trim();
-        if (!v) return alert("名前を入れてね");
-        displayName = v;
-        localStorage.setItem(NAME_KEY, displayName);
+    function nextOrderFor(doneTo){
+      const group = latestTodos.filter(t => t.done === doneTo);
+      const max = group.length ? Math.max(...group.map(t => t.order ?? 0)) : -1;
+      return max + 1;
+    }
 
-        await setDoc(doc(db, "users", uid), {
-          name: displayName,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
-
-        nameBox.style.display = "none";
-        nameHint.style.display = "none";
-        statusEl.textContent = `接続中: ${displayName}`;
-        lockTodoUI(false);
-      };
+    async function setDoneWithOrder(t, doneTo){
+      const newOrder = nextOrderFor(doneTo);
+      await updateDoc(doc(todosCol, t.id), { done: doneTo, order: newOrder });
     }
 
     // 匿名ログイン
@@ -334,7 +357,7 @@
       currentUser = user;
       await ensureDisplayName(user.uid);
 
-      // todos リアルタイム購読（createdAtで取得 → order優先で表示）
+      // todos リアルタイム購読（createdAtで取得 → 未完了→完了の順で表示）
       const q = query(todosCol, orderBy('createdAt'));
       onSnapshot(q, async (snapshot) => {
 
@@ -364,19 +387,27 @@
           try { await batch.commit(); } catch(e) { console.warn(e); }
         }
 
-        // ③ order優先でソート
-        todos.sort((a, b) => {
+        // ③ まず「未完了」「完了」で分け、各グループ内は order でソート
+        const active = todos.filter(t => !t.done).sort((a,b)=>{
+          const ao = (a.order ?? a._fallbackIndex);
+          const bo = (b.order ?? b._fallbackIndex);
+          return ao - bo;
+        });
+        const completed = todos.filter(t => t.done).sort((a,b)=>{
           const ao = (a.order ?? a._fallbackIndex);
           const bo = (b.order ?? b._fallbackIndex);
           return ao - bo;
         });
 
-        // ④ 描画
+        latestTodos = [...active, ...completed];
+
+        // ④ 描画（未完了→完了の順）
         list.innerHTML = "";
-        todos.forEach((t) => {
+        latestTodos.forEach((t) => {
           const li = document.createElement("li");
           li.className = "todo-item";
           li.dataset.id = t.id;
+          li.dataset.done = String(t.done);
 
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
@@ -393,11 +424,22 @@
           const delBtn = document.createElement("button");
           delBtn.textContent = "削除";
 
-          checkbox.addEventListener("change", () => {
-            updateDoc(doc(todosCol, t.id), { done: checkbox.checked });
+          checkbox.addEventListener("change", async () => {
+            await setDoneWithOrder(t, checkbox.checked);
           });
+
           delBtn.addEventListener("click", () => {
             deleteDoc(doc(todosCol, t.id));
+          });
+
+          // 行タップでもチェック切替（入力/ボタン/並び替え中は除外）
+          li.addEventListener("click", async (ev) => {
+            if (isSorting) return;
+            const tag = ev.target.tagName?.toLowerCase();
+            if (tag === "input" || tag === "button") return;
+
+            checkbox.checked = !checkbox.checked;
+            await setDoneWithOrder(t, checkbox.checked);
           });
 
           li.appendChild(checkbox);
@@ -417,36 +459,52 @@
 
         // ⑤ Sortable再初期化（即ドラッグ）
         if (sortable) sortable.destroy();
+        isSorting = false;
+
         sortable = new Sortable(list, {
           animation: 150,
-          delay: 0,                 // 長押し無し
+          delay: 0,
           delayOnTouchOnly: false,
-          touchStartThreshold: 3,   // ちょい誤爆防止（長押しではない）
+          touchStartThreshold: 3,
           ghostClass: "sortable-ghost",
+
+          onStart: () => { isSorting = true; },
+
           onEnd: async () => {
-            const ids = Array.from(list.children).map(li => li.dataset.id);
+            const children = Array.from(list.children);
+            const activeIds = children.filter(li => li.dataset.done === "false")
+                                      .map(li => li.dataset.id);
+            const doneIds = children.filter(li => li.dataset.done === "true")
+                                    .map(li => li.dataset.id);
+
             const batch = writeBatch(db);
-            ids.forEach((id, idx) => {
+            activeIds.forEach((id, idx) => {
               batch.update(doc(todosCol, id), { order: idx });
             });
+            doneIds.forEach((id, idx) => {
+              batch.update(doc(todosCol, id), { order: idx });
+            });
+
             try { await batch.commit(); }
             catch(e){
               console.error(e);
               alert("並び替え保存に失敗: " + e.message);
+            } finally {
+              setTimeout(() => { isSorting = false; }, 0);
             }
           }
         });
       });
     });
 
-    // 追加（末尾 order で追加）
+    // 追加（未完了の末尾に order で追加）
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const text = input.value.trim();
       if (!text || !currentUser) return;
 
       try {
-        const nextOrder = list.children.length;
+        const nextOrder = nextOrderFor(false);
         await addDoc(todosCol, {
           text,
           done: false,
