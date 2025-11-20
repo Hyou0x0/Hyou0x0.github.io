@@ -5,118 +5,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ふたり用 ToDo リスト</title>
   <style>
-    :root {
-      color-scheme: dark light;
+    :root { color-scheme: dark light; }
+    body{
+      margin:0; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:#111; color:#eee; min-height:100vh; display:flex; flex-direction:column;
     }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #111;
-      color: #eee;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+    header{
+      padding:.8rem 1rem; background:#222; display:flex; align-items:center; justify-content:space-between;
+      box-shadow:0 2px 4px rgba(0,0,0,.4);
     }
-    header {
-      padding: 0.8rem 1rem;
-      background: #222;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+    header h1{ font-size:1.1rem; margin:0; }
+    main{
+      flex:1; max-width:640px; width:100%; margin:0 auto; padding:1rem; box-sizing:border-box;
     }
-    header h1 {
-      font-size: 1.1rem;
-      margin: 0;
+    #status{ font-size:.8rem; opacity:.8; margin:.2rem 0 .8rem; }
+
+    /* 名前入力ボックス */
+    .name-box{
+      display:flex; gap:.5rem; align-items:center;
+      background:#181818; border:1px solid #262626; border-radius:.8rem;
+      padding:.6rem .7rem; margin-bottom:.8rem;
     }
-    main {
-      flex: 1;
-      max-width: 640px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 1rem;
-      box-sizing: border-box;
+    .name-box label{ font-size:.85rem; opacity:.85; white-space:nowrap; }
+    .name-box input{
+      flex:1; padding:.5rem .7rem; border-radius:999px; border:1px solid #444;
+      background:#111; color:#eee; font-size:.9rem;
     }
-    #status {
-      font-size: 0.8rem;
-      opacity: 0.8;
-      margin: 0.2rem 0 0.8rem;
+    .name-box button{
+      padding:.5rem .8rem; border-radius:999px; border:none; background:#10b981; color:#fff;
+      font-size:.85rem; font-weight:700; cursor:pointer; white-space:nowrap;
     }
-    form {
-      display: flex;
-      gap: 0.5rem;
-      margin-bottom: 1rem;
+    .name-hint{
+      font-size:.75rem; opacity:.7; margin:-.3rem 0 .7rem .2rem;
     }
-    input[type="text"] {
-      flex: 1;
-      padding: 0.6rem 0.8rem;
-      border-radius: 999px;
-      border: 1px solid #444;
-      background: #181818;
-      color: #eee;
-      font-size: 0.95rem;
-      box-sizing: border-box;
+
+    form{ display:flex; gap:.5rem; margin-bottom:1rem; }
+    input[type="text"]{
+      flex:1; padding:.6rem .8rem; border-radius:999px; border:1px solid #444;
+      background:#181818; color:#eee; font-size:.95rem; box-sizing:border-box;
     }
-    input[type="text"]::placeholder {
-      color: #777;
+    input[type="text"]::placeholder{ color:#777; }
+    button{
+      padding:.6rem .9rem; border-radius:999px; border:none; background:#3b82f6; color:#fff;
+      font-size:.9rem; font-weight:600; cursor:pointer; white-space:nowrap;
     }
-    button {
-      padding: 0.6rem 0.9rem;
-      border-radius: 999px;
-      border: none;
-      background: #3b82f6;
-      color: #fff;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      white-space: nowrap;
+    button:active{ transform:translateY(1px); filter:brightness(.9); }
+    ul{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:.4rem; }
+    .todo-item{
+      display:flex; align-items:center; gap:.5rem; padding:.45rem .6rem; border-radius:.6rem;
+      background:#181818; border:1px solid #262626;
     }
-    button:active {
-      transform: translateY(1px);
-      filter: brightness(0.9);
+    .todo-item .text{
+      flex:1; font-size:.9rem; word-break:break-all; display:flex; align-items:center; gap:.5rem;
     }
-    ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
+    .todo-item .text.done{ text-decoration:line-through; opacity:.6; }
+    .author{
+      font-size:.72rem; opacity:.75; padding:.15rem .4rem; border-radius:999px;
+      background:#0b0b0b; border:1px solid #333; white-space:nowrap;
     }
-    .todo-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.45rem 0.6rem;
-      border-radius: 0.6rem;
-      background: #181818;
-      border: 1px solid #262626;
-    }
-    .todo-item span {
-      flex: 1;
-      font-size: 0.9rem;
-      word-break: break-all;
-    }
-    .todo-item span.done {
-      text-decoration: line-through;
-      opacity: 0.6;
-    }
-    .todo-item button {
-      padding: 0.3rem 0.6rem;
-      font-size: 0.75rem;
-      background: #dc2626;
-    }
-    .todo-item input[type="checkbox"] {
-      width: 1rem;
-      height: 1rem;
-    }
-    @media (min-width: 768px) {
-      header h1 {
-        font-size: 1.2rem;
-      }
-      main {
-        padding-top: 1.2rem;
-      }
+    .todo-item button{ padding:.3rem .6rem; font-size:.75rem; background:#dc2626; }
+    .todo-item input[type="checkbox"]{ width:1rem; height:1rem; }
+
+    @media (min-width:768px){
+      header h1{ font-size:1.2rem; }
+      main{ padding-top:1.2rem; }
     }
   </style>
 </head>
@@ -124,43 +76,50 @@
   <header>
     <h1>ふたり用 ToDo リスト</h1>
   </header>
+
   <main>
     <p id="status">Firebase に接続しています...</p>
+
+    <!-- 名前入力（端末ごとに1回だけ） -->
+    <div id="nameBox" class="name-box" style="display:none;">
+      <label>あなたの名前</label>
+      <input id="nameInput" type="text" placeholder="まさぴ / ゆなぴ" />
+      <button id="nameSave">保存</button>
+    </div>
+    <p id="nameHint" class="name-hint" style="display:none;">
+      ※この端末から追加したToDoに名前が付きます（いつでも変更OK）
+    </p>
+
     <form id="todo-form">
       <input id="todo-input" type="text" placeholder="やることを入力して Enter / 追加" autocomplete="off" required />
       <button type="submit">追加</button>
     </form>
+
     <ul id="todo-list"></ul>
   </main>
 
-  <!-- Firebase JS SDK (CDN, v12) -->
+  <!-- Firebase JS SDK (CDN, modular) -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
     import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js';
     import {
-      getFirestore,
-      collection,
-      addDoc,
-      serverTimestamp,
-      query,
-      orderBy,
-      onSnapshot,
-      doc,
-      updateDoc,
-      deleteDoc
+      getFirestore, collection, addDoc, serverTimestamp,
+      query, orderBy, onSnapshot,
+      doc, updateDoc, deleteDoc,
+      setDoc, getDoc
     } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
+    // modular構成は公式推奨どおり 
 
-    // ▼▼ ここをあなたの Firebase 設定で書き換える ▼▼
-const firebaseConfig = {
-  apiKey: "AIzaSyCy6HHiGMsaXMCVkftoIlZIyJdp3YM7DsI",
-  authDomain: "todo-f9789.firebaseapp.com",
-  projectId: "todo-f9789",
-  storageBucket: "todo-f9789.firebasestorage.app",
-  messagingSenderId: "104760372026",
-  appId: "1:104760372026:web:49268331b63b0189f57e03",
-  measurementId: "G-PFHKZWT093"
-};
-    // ▲▲ ここまで ▲▲
+    // あなたの Firebase 設定
+    const firebaseConfig = {
+      apiKey: "AIzaSyCy6HHiGMsaXMCVkftoIlZIyJdp3YM7DsI",
+      authDomain: "todo-f9789.firebaseapp.com",
+      projectId: "todo-f9789",
+      storageBucket: "todo-f9789.firebasestorage.app",
+      messagingSenderId: "104760372026",
+      appId: "1:104760372026:web:49268331b63b0189f57e03",
+      measurementId: "G-PFHKZWT093"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
@@ -172,10 +131,76 @@ const firebaseConfig = {
     const input = document.getElementById('todo-input');
     const list = document.getElementById('todo-list');
 
+    const nameBox = document.getElementById('nameBox');
+    const nameInput = document.getElementById('nameInput');
+    const nameSave = document.getElementById('nameSave');
+    const nameHint = document.getElementById('nameHint');
+
+    const NAME_KEY = "todoDisplayName";
+    let displayName = localStorage.getItem(NAME_KEY) || "";
+    let currentUser = null;
+
+    function lockTodoUI(lock){
+      input.disabled = lock;
+      form.querySelector('button[type="submit"]').disabled = lock;
+    }
+
+    async function ensureDisplayName(uid){
+      // 1) localStorage があればそれを採用
+      if (displayName && displayName.trim()){
+        statusEl.textContent = `接続中: ${displayName}`;
+        lockTodoUI(false);
+        // users/{uid} にも保存（任意・保険）
+        await setDoc(doc(db, "users", uid), {
+          name: displayName.trim(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        return;
+      }
+
+      // 2) Firestore の users/{uid} に名前があれば拾う
+      try{
+        const uref = doc(db, "users", uid);
+        const usnap = await getDoc(uref);
+        if (usnap.exists() && usnap.data().name){
+          displayName = usnap.data().name;
+          localStorage.setItem(NAME_KEY, displayName);
+          statusEl.textContent = `接続中: ${displayName}`;
+          lockTodoUI(false);
+          return;
+        }
+      }catch(e){
+        console.warn("users read failed:", e);
+      }
+
+      // 3) なければ入力を出す
+      nameBox.style.display = "flex";
+      nameHint.style.display = "block";
+      lockTodoUI(true);
+
+      nameSave.onclick = async () => {
+        const v = nameInput.value.trim();
+        if (!v) return alert("名前を入れてね");
+        displayName = v;
+        localStorage.setItem(NAME_KEY, displayName);
+
+        await setDoc(doc(db, "users", uid), {
+          name: displayName,
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        nameBox.style.display = "none";
+        nameHint.style.display = "none";
+        statusEl.textContent = `接続中: ${displayName}`;
+        lockTodoUI(false);
+      };
+    }
+
     // 匿名ログイン
     onAuthStateChanged(auth, async (user) => {
       if (!user) {
         statusEl.textContent = '匿名ログイン中...';
+        lockTodoUI(true);
         try {
           await signInAnonymously(auth);
         } catch (e) {
@@ -186,14 +211,17 @@ const firebaseConfig = {
         return;
       }
 
-      statusEl.textContent = '匿名ユーザーとして接続中';
+      currentUser = user;
 
-      // todos コレクションのリアルタイム購読
+      await ensureDisplayName(user.uid);
+
+      // todos リアルタイム購読
       const q = query(todosCol, orderBy('createdAt'));
       onSnapshot(q, (snapshot) => {
         list.innerHTML = '';
         snapshot.forEach((docSnap) => {
           const data = docSnap.data();
+
           const li = document.createElement('li');
           li.className = 'todo-item';
 
@@ -201,9 +229,13 @@ const firebaseConfig = {
           checkbox.type = 'checkbox';
           checkbox.checked = !!data.done;
 
-          const span = document.createElement('span');
-          span.textContent = data.text || '';
-          if (data.done) span.classList.add('done');
+          const textWrap = document.createElement('div');
+          textWrap.className = 'text' + (data.done ? ' done' : '');
+          textWrap.textContent = data.text || '';
+
+          const author = document.createElement('span');
+          author.className = 'author';
+          author.textContent = data.authorName ? data.authorName : 'unknown';
 
           const delBtn = document.createElement('button');
           delBtn.textContent = '削除';
@@ -217,7 +249,16 @@ const firebaseConfig = {
           });
 
           li.appendChild(checkbox);
-          li.appendChild(span);
+
+          const textRow = document.createElement('div');
+          textRow.style.display = "flex";
+          textRow.style.alignItems = "center";
+          textRow.style.gap = ".5rem";
+          textRow.style.flex = "1";
+          textRow.appendChild(textWrap);
+          textRow.appendChild(author);
+
+          li.appendChild(textRow);
           li.appendChild(delBtn);
           list.appendChild(li);
         });
@@ -228,12 +269,15 @@ const firebaseConfig = {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const text = input.value.trim();
-      if (!text) return;
+      if (!text || !currentUser) return;
+
       try {
         await addDoc(todosCol, {
           text,
           done: false,
-          createdAt: serverTimestamp()
+          createdAt: serverTimestamp(),
+          authorUid: currentUser.uid,
+          authorName: displayName || "unknown"
         });
         input.value = '';
         input.focus();
