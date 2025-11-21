@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>ふたり用 ToDo リスト</title>
 
+  <!-- ✅ 起動体感を早くする preconnect / dns-prefetch -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://firestore.googleapis.com">
+  <link rel="dns-prefetch" href="//www.gstatic.com">
+  <link rel="dns-prefetch" href="//firestore.googleapis.com">
+
   <!-- PWA manifest（ホーム画面追加でアプリ風） -->
   <link rel="manifest" href="/manifest.webmanifest">
   <meta name="theme-color" content="#111111">
@@ -442,6 +448,9 @@
     let currentFilter = localStorage.getItem(FILTER_KEY) || "all";
     let doneCollapsed = localStorage.getItem(DONE_COLLAPSED_KEY) === "1";
 
+    // ✅ 購読を二重貼りしないためのガード
+    let unsubscribeTodos = null;
+
     function safeVibrate(ms=10){
       try{
         if (navigator.vibrate) navigator.vibrate(ms);
@@ -508,14 +517,16 @@
       });
     }
 
+    // ✅ localStorage名がある時は「即UI解放」してFirestore保存は裏で
     async function ensureDisplayName(uid){
       if (displayName && displayName.trim()){
         statusEl.textContent = `接続中: ${displayName}`;
         lockTodoUI(false);
-        await setDoc(doc(db, "users", uid), {
+
+        setDoc(doc(db, "users", uid), {
           name: displayName.trim(),
           updatedAt: serverTimestamp()
-        }, { merge: true });
+        }, { merge: true }).catch(()=>{});
         return;
       }
 
@@ -545,7 +556,7 @@
         currentFilter = c.dataset.filter;
         localStorage.setItem(FILTER_KEY, currentFilter);
         applyFilterUI();
-        renderAll(); // 再描画
+        renderAll();
       });
     });
     applyFilterUI();
@@ -613,7 +624,6 @@
           }
         }
 
-        // 横スワイプ時だけスクロール抑制
         ev.preventDefault();
 
         const clamped = Math.max(-90, Math.min(90, dx));
@@ -627,15 +637,13 @@
         li.style.transform = "";
 
         if (!swiping) return;
-        if (Math.abs(dx) < 60 || Math.abs(dy) > 25) return; // 判定甘くしない
+        if (Math.abs(dx) < 60 || Math.abs(dy) > 25) return;
 
         if (dx > 0){
-          // 右スワイプで完了/戻す
           checkbox.checked = !checkbox.checked;
           await setDoneWithOrder(t, checkbox.checked);
           safeVibrate(8);
         } else {
-          // 左スワイプで削除
           await deleteDoc(doc(todosCol, t.id));
           safeVibrate(12);
         }
@@ -643,7 +651,7 @@
     }
 
     // 描画
-    function renderList(listEl, todos, isDoneGroup){
+    function renderList(listEl, todos){
       const prevPos = capturePositions(listEl);
       listEl.innerHTML = "";
 
@@ -689,7 +697,6 @@
           deleteDoc(doc(todosCol, t.id));
         });
 
-        // 行タップでもチェック切替
         li.addEventListener("click", async (ev)=>{
           if (isSorting) return;
           const tag = ev.target.tagName?.toLowerCase();
@@ -768,15 +775,14 @@
       if (!pendingRender) return;
       const {activeAll, doneAll, flashIdsByOther} = pendingRender;
 
-      // フィルタ適用（表示用）
       const activeShow = filterTodos(activeAll);
       const doneShow = filterTodos(doneAll);
 
       activeCountEl.textContent = `（${activeShow.length}）`;
       doneCountEl.textContent = `（${doneShow.length}）`;
 
-      renderList(activeList, activeShow, false);
-      renderList(doneList, doneShow, true);
+      renderList(activeList, activeShow);
+      renderList(doneList, doneShow);
 
       initSortables();
 
@@ -785,24 +791,12 @@
       }
     }
 
-    // 匿名ログイン
-    onAuthStateChanged(auth, async (user)=>{
-      if (!user){
-        statusEl.textContent = '匿名ログイン中...';
-        lockTodoUI(true);
-        try{ await signInAnonymously(auth); }
-        catch(e){
-          statusEl.textContent = 'ログインエラー: ' + e.message;
-          return;
-        }
-        return;
-      }
-      currentUser = user;
-      await ensureDisplayName(user.uid);
+    // ✅ ToDo購読だけ先に開始（名前待ちしない）
+    function subscribeTodos(){
+      if (unsubscribeTodos) return;
 
-      // 購読
       const q = query(todosCol, orderBy('createdAt'));
-      onSnapshot(q, async (snapshot)=>{
+      unsubscribeTodos = onSnapshot(q, async (snapshot)=>{
         const todos = snapshot.docs.map((d, i)=>{
           const data = d.data();
           return {
@@ -829,7 +823,6 @@
           try{ await batch.commit(); }catch{}
         }
 
-        // 未完了/完了に分け、orderで安定ソート
         const activeAll = todos.filter(t=>!t.done).sort((a,b)=>{
           const ao = (a.order ?? a._fallbackIndex);
           const bo = (b.order ?? b._fallbackIndex);
@@ -844,18 +837,17 @@
         latestActiveAll = activeAll;
         latestDoneAll = doneAll;
 
-        // 相手の新規追加ハイライト
+        // 相手の新規追加ハイライト（名前未確定時は光らせない）
         const newOnes = todos.filter(t=>!seenIds.has(t.id));
-        const flashIdsByOther = newOnes
-          .filter(t=>t.authorName !== displayName)
-          .map(t=>t.id);
+        const flashIdsByOther = (displayName && displayName.trim())
+          ? newOnes.filter(t=>t.authorName !== displayName).map(t=>t.id)
+          : [];
 
         const markFlash = (list)=> list.map(t=>({
           ...t,
           _flash: flashIdsByOther.includes(t.id)
         }));
 
-        // seen更新
         todos.forEach(t=>seenIds.add(t.id));
 
         pendingRender = {
@@ -865,6 +857,28 @@
         };
         renderAll();
       });
+    }
+
+    // 匿名ログイン
+    onAuthStateChanged(auth, async (user)=>{
+      if (!user){
+        statusEl.textContent = '匿名ログイン中...';
+        lockTodoUI(true);
+
+        signInAnonymously(auth).catch(e=>{
+          console.error(e);
+          statusEl.textContent = 'ログインエラー: ' + e.message;
+        });
+        return;
+      }
+
+      currentUser = user;
+
+      // ✅ まず購読開始（最速でリスト表示）
+      subscribeTodos();
+
+      // ✅ 名前確定は裏で（UIブロックしない）
+      ensureDisplayName(user.uid);
     });
 
     // 追加（未完了末尾）
@@ -881,7 +895,7 @@
           priority:false,
           createdAt: serverTimestamp(),
           authorUid: currentUser.uid,
-          authorName: displayName,
+          authorName: displayName || "unknown",
           order: nextOrder
         });
         input.value="";
