@@ -31,7 +31,7 @@
       min-height:100vh;
       display:flex;
       flex-direction:column;
-      touch-action: pan-y;
+      touch-action: pan-y;  /* 縦だけOK */
     }
 
     header{
@@ -41,6 +41,9 @@
       align-items:center;
       justify-content:space-between;
       box-shadow:0 2px 4px rgba(0,0,0,.4);
+      position:sticky;
+      top:0;
+      z-index:5;
     }
     header h1{ font-size:1.1rem; margin:0; }
 
@@ -50,12 +53,41 @@
       max-width:100%;
       margin:0 auto;
       padding:1rem;
+      padding-bottom: calc(88px + env(safe-area-inset-bottom)); /* 下固定フォーム分 */
       box-sizing:border-box;
     }
+
     #status{
       font-size:.8rem;
       opacity:.8;
-      margin:.2rem 0 .8rem;
+      margin:.2rem 0 .6rem;
+    }
+
+    /* フィルターチップ */
+    .filters{
+      display:flex;
+      gap:.4rem;
+      margin:.4rem 0 .8rem;
+      position:sticky;
+      top:52px; /* header下 */
+      z-index:4;
+      background:#111;
+      padding:.4rem 0;
+    }
+    .chip{
+      padding:.35rem .7rem;
+      border-radius:999px;
+      border:1px solid #333;
+      background:#181818;
+      color:#eee;
+      font-size:.82rem;
+      font-weight:700;
+      cursor:pointer;
+      user-select:none;
+    }
+    .chip.active{
+      border-color:#3b82f6;
+      background:#0f172a;
     }
 
     /* 名前選択ボックス */
@@ -97,37 +129,37 @@
       margin:-.3rem 0 .7rem .2rem;
     }
 
-    form{
+    /* セクション */
+    .section-header{
       display:flex;
-      gap:.5rem;
-      margin-bottom:1rem;
-    }
-    input[type="text"]{
-      flex:1;
-      padding:.6rem .8rem;
-      border-radius:999px;
-      border:1px solid #444;
-      background:#181818;
-      color:#eee;
-      font-size:.95rem;
-      box-sizing:border-box;
-    }
-    input[type="text"]::placeholder{ color:#777; }
-
-    button{
-      padding:.6rem .9rem;
-      border-radius:999px;
-      border:none;
-      background:#3b82f6;
-      color:#fff;
+      align-items:center;
+      justify-content:space-between;
+      margin: .9rem 0 .4rem;
       font-size:.9rem;
-      font-weight:600;
-      cursor:pointer;
-      white-space:nowrap;
+      font-weight:800;
+      letter-spacing:.02em;
+      opacity:.9;
     }
-    button:active{
-      transform:translateY(1px);
-      filter:brightness(.9);
+    .section-header .count{
+      font-size:.8rem;
+      opacity:.75;
+      font-weight:700;
+    }
+    .section-header.done-toggle{
+      cursor:pointer;
+      user-select:none;
+    }
+    .done-collapsed #doneListWrap{
+      display:none;
+    }
+    .done-collapsed .toggle-icon{
+      transform:rotate(-90deg);
+    }
+    .toggle-icon{
+      display:inline-block;
+      transition:transform .18s ease;
+      margin-left:.35rem;
+      opacity:.8;
     }
 
     ul{
@@ -136,7 +168,7 @@
       margin:0;
       display:flex;
       flex-direction:column;
-      gap:.4rem;
+      gap:.45rem;
       width:100%;
       box-sizing:border-box;
     }
@@ -145,19 +177,35 @@
       display:flex;
       align-items:center;
       gap:.5rem;
-      padding:.45rem .6rem;
-      border-radius:.6rem;
+      padding:.6rem .6rem;          /* iPhoneタップしやすく */
+      min-height:44px;              /* iOS推奨のタップ高さ */
+      border-radius:.7rem;
       background:#181818;
       border:1px solid #262626;
       width:100%;
       box-sizing:border-box;
-      touch-action: pan-y;
-      will-change: transform; /* FLIPで滑らかに */
+      touch-action: pan-y;          /* 縦スクロール/縦ドラッグ共存 */
+      will-change: transform;
+      position:relative;
+      overflow:hidden;
     }
+
+    /* 担当色バー */
+    .todo-item::before{
+      content:"";
+      position:absolute;
+      left:0; top:0; bottom:0;
+      width:4px;
+      background:#444;
+      opacity:.9;
+    }
+    .todo-item[data-author="まさぴ"]::before{ background:#3b82f6; }
+    .todo-item[data-author="ゆなぴ"]::before{ background:#a855f7; }
+
     .todo-item .text{
       flex:1;
       min-width:0;
-      font-size:.9rem;
+      font-size:1rem;
       word-break:break-all;
       display:flex;
       align-items:center;
@@ -167,30 +215,111 @@
       text-decoration:line-through;
       opacity:.6;
     }
+
     .author{
       font-size:.72rem;
-      opacity:.75;
-      padding:.15rem .4rem;
+      opacity:.9;
+      padding:.15rem .45rem;
       border-radius:999px;
       background:#0b0b0b;
       border:1px solid #333;
       white-space:nowrap;
+      font-weight:800;
     }
+    .author[data-author="まさぴ"]{
+      background:#0b1a33; border-color:#3b82f6;
+    }
+    .author[data-author="ゆなぴ"]{
+      background:#24102d; border-color:#a855f7;
+    }
+
+    /* 重要★ */
+    .star{
+      font-size:1.05rem;
+      line-height:1;
+      cursor:pointer;
+      user-select:none;
+      opacity:.45;
+      transform:translateY(-1px);
+    }
+    .star.on{
+      opacity:1;
+      filter:drop-shadow(0 0 4px rgba(255,215,0,.35));
+    }
+
     .todo-item button{
       padding:.3rem .6rem;
-      font-size:.75rem;
+      font-size:.78rem;
       background:#dc2626;
+      border:none;
+      color:#fff;
+      border-radius:999px;
+      cursor:pointer;
+      white-space:nowrap;
     }
     .todo-item input[type="checkbox"]{
-      width:1rem; height:1rem;
+      width:1.1rem; height:1.1rem;
     }
 
     /* Sortableの見た目 */
     .todo-item.sortable-ghost{ opacity:.4; }
 
+    /* 相手の新規追加ハイライト */
+    @keyframes flashIn {
+      0%   { background:#3a360f; }
+      100% { background:#181818; }
+    }
+    .todo-item.flash{
+      animation: flashIn 1.2s ease;
+    }
+
+    /* スワイプ時の背景（うっすら） */
+    .todo-item.swipe-right{ background:#0f2a1f; }
+    .todo-item.swipe-left{  background:#2a1111; }
+
+    /* 下固定フォーム */
+    footer{
+      position:fixed;
+      left:0; right:0; bottom:0;
+      background:#151515;
+      border-top:1px solid #242424;
+      padding:.6rem .8rem;
+      padding-bottom: calc(.6rem + env(safe-area-inset-bottom));
+      z-index:10;
+    }
+    form{
+      display:flex;
+      gap:.5rem;
+      margin:0;
+    }
+    input[type="text"]{
+      flex:1;
+      padding:.7rem .9rem;
+      border-radius:999px;
+      border:1px solid #444;
+      background:#181818;
+      color:#eee;
+      font-size:1rem;
+      box-sizing:border-box;
+    }
+    input[type="text"]::placeholder{ color:#777; }
+
+    .add-btn{
+      padding:.7rem 1rem;
+      border-radius:999px;
+      border:none;
+      background:#3b82f6;
+      color:#fff;
+      font-size:.95rem;
+      font-weight:800;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+
     @media (min-width:768px){
       header h1{ font-size:1.2rem; }
       main{ padding-top:1.2rem; }
+      .filters{ top:56px; }
     }
   </style>
 </head>
@@ -201,6 +330,14 @@
 
   <main>
     <p id="status">Firebase に接続しています...</p>
+
+    <!-- フィルター -->
+    <div class="filters">
+      <div class="chip" data-filter="all">全部</div>
+      <div class="chip" data-filter="まさぴ">まさぴ</div>
+      <div class="chip" data-filter="ゆなぴ">ゆなぴ</div>
+      <div class="chip" data-filter="star">★重要</div>
+    </div>
 
     <!-- 名前選択（端末ごとに一度だけ） -->
     <div id="nameBox" class="name-box" style="display:none;">
@@ -214,19 +351,36 @@
       ※この端末から追加したToDoに名前が付きます
     </p>
 
+    <!-- 未完了 -->
+    <div class="section-header" id="activeHeader">
+      <div>未完了<span class="count" id="activeCount"></span></div>
+    </div>
+    <ul id="activeList"></ul>
+
+    <!-- 完了（折りたたみ） -->
+    <div class="section-header done-toggle" id="doneHeader">
+      <div>
+        完了済み<span class="count" id="doneCount"></span>
+        <span class="toggle-icon" id="doneToggleIcon">▾</span>
+      </div>
+    </div>
+    <div id="doneListWrap">
+      <ul id="doneList"></ul>
+    </div>
+  </main>
+
+  <!-- 下固定フォーム -->
+  <footer>
     <form id="todo-form">
       <input id="todo-input" type="text" placeholder="やることを入力して Enter / 追加"
              autocomplete="off" required />
-      <button type="submit">追加</button>
+      <button class="add-btn" type="submit">追加</button>
     </form>
-
-    <ul id="todo-list"></ul>
-  </main>
+  </footer>
 
   <!-- SortableJS（即ドラッグで並び替え） -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
-  <!-- Firebase / App -->
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
     import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js';
@@ -237,7 +391,6 @@
       setDoc, getDoc, writeBatch
     } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
 
-    // Firebase 設定（todo-f9789）
     const firebaseConfig = {
       apiKey: "AIzaSyCy6HHiGMsaXMCVkftoIlZIyJdp3YM7DsI",
       authDomain: "todo-f9789.firebaseapp.com",
@@ -256,35 +409,61 @@
     const statusEl = document.getElementById('status');
     const form = document.getElementById('todo-form');
     const input = document.getElementById('todo-input');
-    const list = document.getElementById('todo-list');
+
+    const activeList = document.getElementById('activeList');
+    const doneList = document.getElementById('doneList');
+    const activeCountEl = document.getElementById('activeCount');
+    const doneCountEl = document.getElementById('doneCount');
 
     const nameBox = document.getElementById('nameBox');
     const nameHint = document.getElementById('nameHint');
     const nameButtons = Array.from(nameBox.querySelectorAll('.name-btn'));
 
+    const doneHeader = document.getElementById('doneHeader');
+    const doneToggleIcon = document.getElementById('doneToggleIcon');
+
+    const chips = Array.from(document.querySelectorAll('.chip'));
+
     const NAME_KEY = "todoDisplayName";
+    const FILTER_KEY = "todoFilter";
+    const DONE_COLLAPSED_KEY = "todoDoneCollapsed";
+
     let displayName = localStorage.getItem(NAME_KEY) || "";
     let currentUser = null;
-    let sortable = null;
-    let isSorting = false; // 並び替え中ガード
-    let latestTodos = [];  // 次のorder計算用に保持
+
+    let activeSortable = null;
+    let doneSortable = null;
+    let isSorting = false;
+
+    let latestActiveAll = [];
+    let latestDoneAll = [];
+    const seenIds = new Set();
+
+    let currentFilter = localStorage.getItem(FILTER_KEY) || "all";
+    let doneCollapsed = localStorage.getItem(DONE_COLLAPSED_KEY) === "1";
+
+    function safeVibrate(ms=10){
+      try{
+        if (navigator.vibrate) navigator.vibrate(ms);
+      }catch{}
+    }
 
     function lockTodoUI(lock){
       input.disabled = lock;
       form.querySelector('button[type="submit"]').disabled = lock;
     }
 
-    // === FLIPアニメーション用 ===
-    function capturePositions(){
+    // === FLIPアニメーション用（リストごと） ===
+    function capturePositions(listEl){
       const map = new Map();
-      Array.from(list.children).forEach(li=>{
+      Array.from(listEl.children).forEach(li=>{
         if (!li.dataset.id) return;
         map.set(li.dataset.id, li.getBoundingClientRect());
       });
       return map;
     }
-    function animateFlip(prevMap){
-      Array.from(list.children).forEach(li=>{
+    function animateFlip(listEl, prevMap){
+      Array.from(listEl.children).forEach(li=>{
         const id = li.dataset.id;
         const oldRect = prevMap.get(id);
         if (!oldRect) return;
@@ -304,6 +483,7 @@
       });
     }
 
+    // 名前選択UI
     function pickNameUI(uid){
       nameBox.style.display = "flex";
       nameHint.style.display = "block";
@@ -329,7 +509,6 @@
     }
 
     async function ensureDisplayName(uid){
-      // localStorageに名前があればそれを使う
       if (displayName && displayName.trim()){
         statusEl.textContent = `接続中: ${displayName}`;
         lockTodoUI(false);
@@ -340,7 +519,6 @@
         return;
       }
 
-      // Firestore users/{uid} に名前があれば拾う
       try{
         const uref = doc(db, "users", uid);
         const usnap = await getDoc(uref);
@@ -351,15 +529,47 @@
           lockTodoUI(false);
           return;
         }
-      }catch(e){
-        console.warn("users read failed:", e);
-      }
+      }catch{}
 
       pickNameUI(uid);
     }
 
+    // フィルターUI
+    function applyFilterUI(){
+      chips.forEach(c=>{
+        c.classList.toggle("active", c.dataset.filter === currentFilter);
+      });
+    }
+    chips.forEach(c=>{
+      c.addEventListener("click", ()=>{
+        currentFilter = c.dataset.filter;
+        localStorage.setItem(FILTER_KEY, currentFilter);
+        applyFilterUI();
+        renderAll(); // 再描画
+      });
+    });
+    applyFilterUI();
+
+    // 完了折りたたみ
+    function applyDoneCollapseUI(){
+      document.body.classList.toggle("done-collapsed", doneCollapsed);
+      doneToggleIcon.textContent = doneCollapsed ? "▸" : "▾";
+    }
+    doneHeader.addEventListener("click", ()=>{
+      doneCollapsed = !doneCollapsed;
+      localStorage.setItem(DONE_COLLAPSED_KEY, doneCollapsed ? "1":"0");
+      applyDoneCollapseUI();
+    });
+    applyDoneCollapseUI();
+
+    function filterTodos(todos){
+      if (currentFilter === "all") return todos;
+      if (currentFilter === "star") return todos.filter(t=>t.priority);
+      return todos.filter(t=>t.authorName === currentFilter);
+    }
+
     function nextOrderFor(doneTo){
-      const group = latestTodos.filter(t => t.done === doneTo);
+      const group = doneTo ? latestDoneAll : latestActiveAll;
       const max = group.length ? Math.max(...group.map(t => t.order ?? 0)) : -1;
       return max + 1;
     }
@@ -369,30 +579,231 @@
       await updateDoc(doc(todosCol, t.id), { done: doneTo, order: newOrder });
     }
 
+    async function togglePriority(t){
+      await updateDoc(doc(todosCol, t.id), { priority: !t.priority });
+    }
+
+    // スワイプ（右=完了、左=削除）
+    function attachSwipe(li, t, checkbox){
+      let startX=0, startY=0, dx=0, dy=0, swiping=false;
+
+      li.addEventListener("touchstart", (ev)=>{
+        if (isSorting) return;
+        const tag = ev.target.tagName?.toLowerCase();
+        if (tag === "input" || tag === "button") return;
+
+        const touch = ev.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        dx=dy=0; swiping=false;
+      }, {passive:true});
+
+      li.addEventListener("touchmove", (ev)=>{
+        if (isSorting) return;
+        if (!ev.touches || ev.touches.length!==1) return;
+        const touch = ev.touches[0];
+        dx = touch.clientX - startX;
+        dy = touch.clientY - startY;
+
+        if (!swiping){
+          if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)){
+            swiping = true;
+          } else {
+            return;
+          }
+        }
+
+        // 横スワイプ時だけスクロール抑制
+        ev.preventDefault();
+
+        const clamped = Math.max(-90, Math.min(90, dx));
+        li.style.transform = `translateX(${clamped}px)`;
+        li.classList.toggle("swipe-right", clamped > 0);
+        li.classList.toggle("swipe-left", clamped < 0);
+      }, {passive:false});
+
+      li.addEventListener("touchend", async ()=>{
+        li.classList.remove("swipe-right","swipe-left");
+        li.style.transform = "";
+
+        if (!swiping) return;
+        if (Math.abs(dx) < 60 || Math.abs(dy) > 25) return; // 判定甘くしない
+
+        if (dx > 0){
+          // 右スワイプで完了/戻す
+          checkbox.checked = !checkbox.checked;
+          await setDoneWithOrder(t, checkbox.checked);
+          safeVibrate(8);
+        } else {
+          // 左スワイプで削除
+          await deleteDoc(doc(todosCol, t.id));
+          safeVibrate(12);
+        }
+      });
+    }
+
+    // 描画
+    function renderList(listEl, todos, isDoneGroup){
+      const prevPos = capturePositions(listEl);
+      listEl.innerHTML = "";
+
+      todos.forEach((t)=>{
+        const li = document.createElement("li");
+        li.className = "todo-item";
+        li.dataset.id = t.id;
+        li.dataset.done = String(t.done);
+        li.dataset.author = t.authorName;
+
+        if (t._flash) li.classList.add("flash");
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = t.done;
+
+        const star = document.createElement("span");
+        star.className = "star" + (t.priority ? " on" : "");
+        star.textContent = "★";
+        star.addEventListener("click", async (ev)=>{
+          ev.stopPropagation();
+          await togglePriority(t);
+        });
+
+        const textWrap = document.createElement("div");
+        textWrap.className = "text" + (t.done ? " done" : "");
+        textWrap.textContent = t.text;
+
+        const author = document.createElement("span");
+        author.className = "author";
+        author.dataset.author = t.authorName;
+        author.textContent = t.authorName;
+
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "削除";
+
+        checkbox.addEventListener("change", async ()=>{
+          await setDoneWithOrder(t, checkbox.checked);
+        });
+
+        delBtn.addEventListener("click", (ev)=>{
+          ev.stopPropagation();
+          deleteDoc(doc(todosCol, t.id));
+        });
+
+        // 行タップでもチェック切替
+        li.addEventListener("click", async (ev)=>{
+          if (isSorting) return;
+          const tag = ev.target.tagName?.toLowerCase();
+          if (tag === "input" || tag === "button" || tag === "span") return;
+
+          checkbox.checked = !checkbox.checked;
+          await setDoneWithOrder(t, checkbox.checked);
+        });
+
+        attachSwipe(li, t, checkbox);
+
+        li.appendChild(checkbox);
+
+        const textRow = document.createElement("div");
+        textRow.className = "text";
+        textRow.style.display="flex";
+        textRow.style.alignItems="center";
+        textRow.style.gap=".5rem";
+        textRow.style.flex="1";
+        textRow.appendChild(star);
+        textRow.appendChild(textWrap);
+        textRow.appendChild(author);
+
+        li.appendChild(textRow);
+        li.appendChild(delBtn);
+        listEl.appendChild(li);
+      });
+
+      requestAnimationFrame(()=>animateFlip(listEl, prevPos));
+    }
+
+    // 並び替え初期化（各リスト独立）
+    function initSortables(){
+      if (activeSortable) activeSortable.destroy();
+      if (doneSortable) doneSortable.destroy();
+
+      activeSortable = new Sortable(activeList, {
+        animation:150,
+        delay:0,
+        delayOnTouchOnly:false,
+        touchStartThreshold:3,
+        ghostClass:"sortable-ghost",
+        onStart: ()=>{ isSorting=true; },
+        onEnd: async ()=>{
+          const ids = Array.from(activeList.children).map(li=>li.dataset.id);
+          const batch = writeBatch(db);
+          ids.forEach((id, idx)=>{
+            batch.update(doc(todosCol, id), { order: idx });
+          });
+          try{ await batch.commit(); }
+          finally{ setTimeout(()=>isSorting=false,0); }
+        }
+      });
+
+      doneSortable = new Sortable(doneList, {
+        animation:150,
+        delay:0,
+        delayOnTouchOnly:false,
+        touchStartThreshold:3,
+        ghostClass:"sortable-ghost",
+        onStart: ()=>{ isSorting=true; },
+        onEnd: async ()=>{
+          const ids = Array.from(doneList.children).map(li=>li.dataset.id);
+          const batch = writeBatch(db);
+          ids.forEach((id, idx)=>{
+            batch.update(doc(todosCol, id), { order: idx });
+          });
+          try{ await batch.commit(); }
+          finally{ setTimeout(()=>isSorting=false,0); }
+        }
+      });
+    }
+
+    let pendingRender = null;
+    function renderAll(){
+      if (!pendingRender) return;
+      const {activeAll, doneAll, flashIdsByOther} = pendingRender;
+
+      // フィルタ適用（表示用）
+      const activeShow = filterTodos(activeAll);
+      const doneShow = filterTodos(doneAll);
+
+      activeCountEl.textContent = `（${activeShow.length}）`;
+      doneCountEl.textContent = `（${doneShow.length}）`;
+
+      renderList(activeList, activeShow, false);
+      renderList(doneList, doneShow, true);
+
+      initSortables();
+
+      if (flashIdsByOther.length){
+        safeVibrate(8);
+      }
+    }
+
     // 匿名ログイン
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) {
+    onAuthStateChanged(auth, async (user)=>{
+      if (!user){
         statusEl.textContent = '匿名ログイン中...';
         lockTodoUI(true);
-        try {
-          await signInAnonymously(auth);
-        } catch (e) {
-          console.error(e);
+        try{ await signInAnonymously(auth); }
+        catch(e){
           statusEl.textContent = 'ログインエラー: ' + e.message;
           return;
         }
         return;
       }
-
       currentUser = user;
       await ensureDisplayName(user.uid);
 
-      // todos リアルタイム購読（createdAtで取得 → 未完了→完了の順で表示）
+      // 購読
       const q = query(todosCol, orderBy('createdAt'));
-      onSnapshot(q, async (snapshot) => {
-
-        // ① 配列化
-        const todos = snapshot.docs.map((d, i) => {
+      onSnapshot(q, async (snapshot)=>{
+        const todos = snapshot.docs.map((d, i)=>{
           const data = d.data();
           return {
             id: d.id,
@@ -400,162 +811,86 @@
             done: !!data.done,
             authorName: data.authorName || "unknown",
             order: (typeof data.order === "number") ? data.order : null,
+            priority: !!data.priority,
             _fallbackIndex: i
           };
         });
 
-        // ② orderが無い旧データがあれば初回だけ採番
-        const needBackfill = todos.some(t => t.order === null);
-        if (needBackfill) {
+        // order無し採番（初回のみ）
+        const needBackfill = todos.some(t=>t.order===null);
+        if (needBackfill){
           const batch = writeBatch(db);
-          todos.forEach((t, idx) => {
-            if (t.order === null) {
+          todos.forEach((t, idx)=>{
+            if (t.order===null){
               batch.update(doc(todosCol, t.id), { order: idx });
               t.order = idx;
             }
           });
-          try { await batch.commit(); } catch(e) { console.warn(e); }
+          try{ await batch.commit(); }catch{}
         }
 
-        // ③ 未完了 / 完了で分け、各グループ内は order でソート
-        const active = todos.filter(t => !t.done).sort((a,b)=>{
+        // 未完了/完了に分け、orderで安定ソート
+        const activeAll = todos.filter(t=>!t.done).sort((a,b)=>{
           const ao = (a.order ?? a._fallbackIndex);
           const bo = (b.order ?? b._fallbackIndex);
           return ao - bo;
         });
-        const completed = todos.filter(t => t.done).sort((a,b)=>{
+        const doneAll = todos.filter(t=>t.done).sort((a,b)=>{
           const ao = (a.order ?? a._fallbackIndex);
           const bo = (b.order ?? b._fallbackIndex);
           return ao - bo;
         });
 
-        latestTodos = [...active, ...completed];
+        latestActiveAll = activeAll;
+        latestDoneAll = doneAll;
 
-        // ★描画前の位置を記録
-        const prevPos = capturePositions();
+        // 相手の新規追加ハイライト
+        const newOnes = todos.filter(t=>!seenIds.has(t.id));
+        const flashIdsByOther = newOnes
+          .filter(t=>t.authorName !== displayName)
+          .map(t=>t.id);
 
-        // ④ 描画（未完了→完了の順）
-        list.innerHTML = "";
-        latestTodos.forEach((t) => {
-          const li = document.createElement("li");
-          li.className = "todo-item";
-          li.dataset.id = t.id;
-          li.dataset.done = String(t.done);
+        const markFlash = (list)=> list.map(t=>({
+          ...t,
+          _flash: flashIdsByOther.includes(t.id)
+        }));
 
-          const checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.checked = t.done;
+        // seen更新
+        todos.forEach(t=>seenIds.add(t.id));
 
-          const textWrap = document.createElement("div");
-          textWrap.className = "text" + (t.done ? " done" : "");
-          textWrap.textContent = t.text;
-
-          const author = document.createElement("span");
-          author.className = "author";
-          author.textContent = t.authorName;
-
-          const delBtn = document.createElement("button");
-          delBtn.textContent = "削除";
-
-          checkbox.addEventListener("change", async () => {
-            await setDoneWithOrder(t, checkbox.checked);
-          });
-
-          delBtn.addEventListener("click", () => {
-            deleteDoc(doc(todosCol, t.id));
-          });
-
-          // 行タップでもチェック切替（入力/ボタン/並び替え中は除外）
-          li.addEventListener("click", async (ev) => {
-            if (isSorting) return;
-            const tag = ev.target.tagName?.toLowerCase();
-            if (tag === "input" || tag === "button") return;
-
-            checkbox.checked = !checkbox.checked;
-            await setDoneWithOrder(t, checkbox.checked);
-          });
-
-          li.appendChild(checkbox);
-
-          const textRow = document.createElement("div");
-          textRow.style.display = "flex";
-          textRow.style.alignItems = "center";
-          textRow.style.gap = ".5rem";
-          textRow.style.flex = "1";
-          textRow.appendChild(textWrap);
-          textRow.appendChild(author);
-
-          li.appendChild(textRow);
-          li.appendChild(delBtn);
-          list.appendChild(li);
-        });
-
-        // ★描画後にFLIPアニメで滑らかに移動
-        requestAnimationFrame(() => animateFlip(prevPos));
-
-        // ⑤ Sortable再初期化（即ドラッグ）
-        if (sortable) sortable.destroy();
-        isSorting = false;
-
-        sortable = new Sortable(list, {
-          animation: 150,
-          delay: 0,
-          delayOnTouchOnly: false,
-          touchStartThreshold: 3,
-          ghostClass: "sortable-ghost",
-
-          onStart: () => { isSorting = true; },
-
-          onEnd: async () => {
-            const children = Array.from(list.children);
-            const activeIds = children.filter(li => li.dataset.done === "false")
-                                      .map(li => li.dataset.id);
-            const doneIds = children.filter(li => li.dataset.done === "true")
-                                    .map(li => li.dataset.id);
-
-            const batch = writeBatch(db);
-            activeIds.forEach((id, idx) => {
-              batch.update(doc(todosCol, id), { order: idx });
-            });
-            doneIds.forEach((id, idx) => {
-              batch.update(doc(todosCol, id), { order: idx });
-            });
-
-            try { await batch.commit(); }
-            catch(e){
-              console.error(e);
-              alert("並び替え保存に失敗: " + e.message);
-            } finally {
-              setTimeout(() => { isSorting = false; }, 0);
-            }
-          }
-        });
+        pendingRender = {
+          activeAll: markFlash(activeAll),
+          doneAll: markFlash(doneAll),
+          flashIdsByOther
+        };
+        renderAll();
       });
     });
 
-    // 追加（未完了の末尾に order で追加）
-    form.addEventListener('submit', async (e) => {
+    // 追加（未完了末尾）
+    form.addEventListener("submit", async (e)=>{
       e.preventDefault();
       const text = input.value.trim();
       if (!text || !currentUser) return;
 
-      try {
+      try{
         const nextOrder = nextOrderFor(false);
         await addDoc(todosCol, {
           text,
-          done: false,
+          done:false,
+          priority:false,
           createdAt: serverTimestamp(),
           authorUid: currentUser.uid,
-          authorName: displayName || "unknown",
+          authorName: displayName,
           order: nextOrder
         });
-        input.value = '';
+        input.value="";
         input.focus();
-      } catch (e) {
-        console.error(e);
-        alert('追加に失敗しました: ' + e.message);
+      }catch(e){
+        alert("追加に失敗: " + e.message);
       }
     });
+
   </script>
 </body>
 </html>
