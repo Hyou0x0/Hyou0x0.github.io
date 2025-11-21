@@ -387,6 +387,21 @@
   <!-- SortableJS（即ドラッグで並び替え） -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
+  <!-- ✅ 起動直後にキャッシュを読んで“即表示”するための事前ロード -->
+  <script>
+    (() => {
+      try {
+        const CACHE_KEY = "todoCache_v1";
+        const str = localStorage.getItem(CACHE_KEY);
+        if (!str) return;
+        const arr = JSON.parse(str);
+        if (Array.isArray(arr)) {
+          window.__BOOT_CACHE__ = arr;
+        }
+      } catch {}
+    })();
+  </script>
+
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js';
     import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js';
@@ -394,7 +409,8 @@
       getFirestore, collection, addDoc, serverTimestamp,
       query, orderBy, onSnapshot,
       doc, updateDoc, deleteDoc,
-      setDoc, getDoc, writeBatch
+      setDoc, getDoc, writeBatch,
+      enableIndexedDbPersistence
     } from 'https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js';
 
     const firebaseConfig = {
@@ -410,6 +426,10 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    // ✅ 永続化（失敗してもOK）
+    enableIndexedDbPersistence(db).catch(()=>{});
+
     const todosCol = collection(db, 'todos');
 
     const statusEl = document.getElementById('status');
@@ -433,6 +453,7 @@
     const NAME_KEY = "todoDisplayName";
     const FILTER_KEY = "todoFilter";
     const DONE_COLLAPSED_KEY = "todoDoneCollapsed";
+    const CACHE_KEY = "todoCache_v1";
 
     let displayName = localStorage.getItem(NAME_KEY) || "";
     let currentUser = null;
@@ -448,13 +469,10 @@
     let currentFilter = localStorage.getItem(FILTER_KEY) || "all";
     let doneCollapsed = localStorage.getItem(DONE_COLLAPSED_KEY) === "1";
 
-    // ✅ 購読を二重貼りしないためのガード
     let unsubscribeTodos = null;
 
     function safeVibrate(ms=10){
-      try{
-        if (navigator.vibrate) navigator.vibrate(ms);
-      }catch{}
+      try{ if (navigator.vibrate) navigator.vibrate(ms); }catch{}
     }
 
     function lockTodoUI(lock){
@@ -462,7 +480,7 @@
       form.querySelector('button[type="submit"]').disabled = lock;
     }
 
-    // === FLIPアニメーション用（リストごと） ===
+    // === FLIPアニメーション用 ===
     function capturePositions(listEl){
       const map = new Map();
       Array.from(listEl.children).forEach(li=>{
@@ -476,7 +494,6 @@
         const id = li.dataset.id;
         const oldRect = prevMap.get(id);
         if (!oldRect) return;
-
         const newRect = li.getBoundingClientRect();
         const dx = oldRect.left - newRect.left;
         const dy = oldRect.top - newRect.top;
@@ -484,12 +501,39 @@
 
         li.style.transition = "none";
         li.style.transform = `translate(${dx}px, ${dy}px)`;
-
         requestAnimationFrame(() => {
           li.style.transition = "transform 180ms ease";
           li.style.transform = "";
         });
       });
+    }
+
+    // ✅ 起動直後にキャッシュを即表示
+    function bootFromCache(){
+      const boot = window.__BOOT_CACHE__;
+      if (!Array.isArray(boot) || !boot.length) return false;
+
+      const todos = boot.map((t,i)=>({
+        id: t.id,
+        text: t.text || "",
+        done: !!t.done,
+        authorName: t.authorName || "unknown",
+        order: (typeof t.order==="number") ? t.order : i,
+        priority: !!t.priority,
+        _fallbackIndex: i,
+        _flash:false
+      }));
+
+      const activeAll = todos.filter(t=>!t.done).sort((a,b)=>a.order-b.order);
+      const doneAll = todos.filter(t=>t.done).sort((a,b)=>a.order-b.order);
+      latestActiveAll = activeAll;
+      latestDoneAll = doneAll;
+
+      pendingRender = { activeAll, doneAll, flashIdsByOther: [] };
+      renderAll();
+
+      statusEl.textContent = "前回のリストを表示中...";
+      return true;
     }
 
     // 名前選択UI
@@ -517,12 +561,11 @@
       });
     }
 
-    // ✅ localStorage名がある時は「即UI解放」してFirestore保存は裏で
+    // localStorage名がある時は即UI解放
     async function ensureDisplayName(uid){
       if (displayName && displayName.trim()){
         statusEl.textContent = `接続中: ${displayName}`;
         lockTodoUI(false);
-
         setDoc(doc(db, "users", uid), {
           name: displayName.trim(),
           updatedAt: serverTimestamp()
@@ -785,13 +828,10 @@
       renderList(doneList, doneShow);
 
       initSortables();
-
-      if (flashIdsByOther.length){
-        safeVibrate(8);
-      }
+      if (flashIdsByOther.length) safeVibrate(8);
     }
 
-    // ✅ ToDo購読だけ先に開始（名前待ちしない）
+    // ✅ ToDo購読（最速で更新を受ける）
     function subscribeTodos(){
       if (unsubscribeTodos) return;
 
@@ -837,7 +877,17 @@
         latestActiveAll = activeAll;
         latestDoneAll = doneAll;
 
-        // 相手の新規追加ハイライト（名前未確定時は光らせない）
+        // ✅ キャッシュ保存（次回即表示用）
+        try{
+          const minimal = todos.map(t=>({
+            id:t.id, text:t.text, done:t.done,
+            order:t.order, priority:t.priority,
+            authorName:t.authorName
+          }));
+          localStorage.setItem(CACHE_KEY, JSON.stringify(minimal));
+        }catch{}
+
+        // 相手の新規追加ハイライト
         const newOnes = todos.filter(t=>!seenIds.has(t.id));
         const flashIdsByOther = (displayName && displayName.trim())
           ? newOnes.filter(t=>t.authorName !== displayName).map(t=>t.id)
@@ -856,6 +906,13 @@
           flashIdsByOther
         };
         renderAll();
+
+        // ✅ 初回スナップショットが来た時点でステータス更新
+        if (displayName && displayName.trim()){
+          statusEl.textContent = `接続中: ${displayName}`;
+        } else {
+          statusEl.textContent = "接続中";
+        }
       });
     }
 
@@ -864,7 +921,6 @@
       if (!user){
         statusEl.textContent = '匿名ログイン中...';
         lockTodoUI(true);
-
         signInAnonymously(auth).catch(e=>{
           console.error(e);
           statusEl.textContent = 'ログインエラー: ' + e.message;
@@ -874,10 +930,13 @@
 
       currentUser = user;
 
-      // ✅ まず購読開始（最速でリスト表示）
+      // ✅ まずキャッシュを即表示（ここで体感の待ちが消える）
+      bootFromCache();
+
+      // ✅ すぐ購読開始（ネットの初回が来たら上書き）
       subscribeTodos();
 
-      // ✅ 名前確定は裏で（UIブロックしない）
+      // ✅ 名前は裏で確定
       ensureDisplayName(user.uid);
     });
 
@@ -904,7 +963,6 @@
         alert("追加に失敗: " + e.message);
       }
     });
-
   </script>
 </body>
 </html>
