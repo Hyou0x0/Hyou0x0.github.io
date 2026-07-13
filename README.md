@@ -66,3 +66,10 @@ Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→autho
 - ハンドルのタッチ領域を50〜54pxへ拡大
 - ハンドルと重要ボタンの境界線を追加
 - チェックボックスのタッチ位置と並び替え操作を分離
+
+
+## UI v9 の変更
+
+- 旧Firestoreデータの復元・移行機能を完全に削除
+- 右上の復元ボタン（↻）を削除
+- Realtime Databaseだけを使用する通常運用版へ整理
