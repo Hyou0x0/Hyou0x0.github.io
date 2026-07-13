@@ -1,1 +1,1 @@
-futari-todo v17 icon hard fix
+futari-todo v18 completed layout fix

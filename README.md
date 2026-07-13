@@ -143,3 +143,11 @@ Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→autho
 - Apple用アイコンを透過なしRGB PNGへ変換
 - アイコン参照URLに `?v=17` を付けてキャッシュを回避
 - manifest内アイコン参照も更新
+
+
+## UI v18
+
+- 完了済み行のレイアウト崩れを修正
+- 完了済みでも通常行と同じグリッド幅・高さを維持
+- 新しい `todo-shell > todo-item` 構造に合わせて完了スタイルを再定義
+- 完了済みは透明度と取り消し線だけを変更し、配置は変えない
