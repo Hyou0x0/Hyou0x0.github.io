@@ -58,3 +58,11 @@ git push
 
 ## v7
 Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→author、priority→important、Timestamp→ミリ秒へ変換。
+
+
+## UI v8 の変更
+
+- 並び替えハンドルをチェックボックスの隣から右端へ移動
+- ハンドルのタッチ領域を50〜54pxへ拡大
+- ハンドルと重要ボタンの境界線を追加
+- チェックボックスのタッチ位置と並び替え操作を分離
