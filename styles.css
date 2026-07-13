@@ -281,7 +281,7 @@ button,input{font:inherit}
 }
 .todo-shell.is-done .author-badge{opacity:.75}
 
-/* Swipe action layers */
+/* Swipe action layer: delete only */
 .swipe-action{
   position:absolute;
   inset-block:0;
@@ -289,7 +289,6 @@ button,input{font:inherit}
   display:flex;
   width:92px;
 }
-.swipe-action-complete{left:0}
 .swipe-action-delete{right:0}
 .swipe-action button{
   width:100%;
@@ -300,36 +299,32 @@ button,input{font:inherit}
   font-weight:900;
   letter-spacing:.04em;
 }
-.complete-action-button{background:#238653}
 .delete-action-button{background:#c43d50}
-.todo-shell.is-done .complete-action-button{background:#4b657f}
 
-.todo-shell.revealed-right,
 .todo-shell.revealed-left,
-.todo-shell.revealed-right .todo-item,
 .todo-shell.revealed-left .todo-item{
   border-radius:0;
 }
-.todo-shell.revealed-right .todo-item{transform:translateX(92px)}
-.todo-shell.revealed-left .todo-item{transform:translateX(-92px)}
+.todo-shell.revealed-left .todo-item{
+  transform:translateX(-92px);
+  border-left-color:var(--border);
+  border-left-width:1px;
+}
 .todo-shell.revealed-left .todo-check{
   visibility:hidden;
   pointer-events:none;
 }
-.todo-shell.revealed-left .todo-item{
-  border-left-color:var(--border);
-  border-left-width:1px;
-}
-.todo-shell.revealed-right .drag-handle{
-  visibility:hidden;
-  pointer-events:none;
-}
-.todo-shell.revealed-right .todo-item{
-  border-right-color:var(--border);
-}
-.todo-shell.revealed-right .swipe-action-complete,
 .todo-shell.revealed-left .swipe-action-delete{
   z-index:3;
+}
+
+/* Hidden until an actual left swipe starts */
+.todo-shell .swipe-action{
+  display:none !important;
+}
+.todo-shell.swiping-left .swipe-action-delete,
+.todo-shell.revealed-left .swipe-action-delete{
+  display:flex !important;
 }
 
 .todo-ghost{opacity:.28}
@@ -453,11 +448,11 @@ button,input{font:inherit}
   .composer form{max-width:696px;margin:0 auto}
 }
 
-/* v20: hidden swipe actions must never show through completed rows */
-.todo-shell:not(.revealed-left):not(.revealed-right) .swipe-action{
-  visibility:hidden;
+/* v21: action buttons are absent until an actual swipe starts */
+.todo-shell .swipe-action{
+  display:none !important;
 }
-.todo-shell.revealed-left .swipe-action-delete,
-.todo-shell.revealed-right .swipe-action-complete{
-  visibility:visible;
+.todo-shell.swiping-left .swipe-action-delete,
+.todo-shell.revealed-left .swipe-action-delete{
+  display:flex !important;
 }

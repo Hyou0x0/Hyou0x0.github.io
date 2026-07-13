@@ -1,5 +1,5 @@
 
-import{initializeApp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";import{getDatabase,ref,push,set,update,remove,onValue,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";import{firebaseConfig}from"./firebase-config.js?v=20";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";import{getDatabase,ref,push,set,update,remove,onValue,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";import{firebaseConfig}from"./firebase-config.js?v=22";
 const S={USER:"futariTodo.user.v2",FILTER:"futariTodo.filter.v2",COLLAPSED:"futariTodo.collapsed.v2",CACHE:"futariTodo.cache.v2"},GAP=1024,USERS=new Set(["まさぴ","ゆなぴ"]),q=s=>document.querySelector(s),qa=s=>[...document.querySelectorAll(s)];
 const e={status:q("#syncStatus"),chooser:q("#userChooser"),change:q("#changeUserButton"),filters:qa("[data-filter]"),active:q("#activeList"),done:q("#completedList"),activeCount:q("#activeCount"),doneCount:q("#completedCount"),activeEmpty:q("#activeEmpty"),doneEmpty:q("#completedEmpty"),toggle:q("#completedToggle"),doneBody:q("#completedBody"),chevron:q("#completedChevron"),form:q("#todoForm"),input:q("#todoInput"),add:q("#addButton"),template:q("#todoTemplate"),editDialog:q("#editDialog"),editForm:q("#editForm"),editInput:q("#editInput"),editCancel:q("#editCancelButton"),editSave:q("#editSaveButton")};
 let firebaseApp=null;const valid=v=>USERS.has(v)?v:"";const st={user:valid(localStorage.getItem(S.USER)),filter:(()=>{const f=localStorage.getItem(S.FILTER)||"all";return["まさぴ","ゆなぴ","important"].includes(f)?"all":f})(),collapsed:localStorage.getItem(S.COLLAPSED)==="1",todos:new Map,db:null,authUser:null,connected:false,serverLoaded:false,rescueAttempted:false,editingId:null,sortA:null,sortD:null};
@@ -16,7 +16,7 @@ function create(x){
 
   shell.querySelector(".todo-content").addEventListener("click",()=>{
     if(shell.dataset.suppressClick==="1")return;
-    if(shell.classList.contains("revealed-left")||shell.classList.contains("revealed-right")){
+    if(shell.classList.contains("revealed-left")){
       closeSwipe(shell);
       return;
     }
@@ -26,12 +26,6 @@ function create(x){
   shell.querySelector(".delete-action-button").addEventListener("click",async()=>{
     closeSwipe(shell);
     await del(x.id);
-  });
-
-  shell.querySelector(".complete-action-button").addEventListener("click",async()=>{
-    closeSwipe(shell);
-    const item=st.todos.get(x.id);
-    if(item)await done(x.id,!item.done);
   });
 
   swipe(shell);
@@ -48,7 +42,6 @@ function updateRow(shell,x){
   shell.querySelector(".todo-check").checked=x.done;
   shell.querySelector(".todo-text").textContent=x.text;
   shell.querySelector(".author-badge").textContent=x.author;
-  shell.querySelector(".complete-action-button").textContent=x.done?"未完了":"完了";
 }
 function sortables(){if(!window.Sortable)return;if(!st.sortA)st.sortA=new Sortable(e.active,{animation:180,handle:".drag-handle",delay:0,touchStartThreshold:2,ghostClass:"todo-ghost",chosenClass:"todo-chosen",dragClass:"todo-dragging",onEnd:v=>move(e.active,v.item.dataset.id)});if(!st.sortD)st.sortD=new Sortable(e.done,{animation:180,handle:".drag-handle",delay:0,touchStartThreshold:2,ghostClass:"todo-ghost",chosenClass:"todo-chosen",dragClass:"todo-dragging",onEnd:v=>move(e.done,v.item.dataset.id)})}
 async function move(ul,id){if(!st.db)return;const ids=[...ul.children].map(n=>n.dataset.id),i=ids.indexOf(id),p=i>0?st.todos.get(ids[i-1]):null,n=i<ids.length-1?st.todos.get(ids[i+1]):null;let order=!p&&!n?GAP:!p?n.order-GAP:!n?p.order+GAP:(p.order+n.order)/2;st.todos.get(id).order=order;cache();try{await update(ref(st.db,`todos/${id}`),{order})}catch{status("並び替え保存に失敗","offline")}}
@@ -122,13 +115,13 @@ async function saveEdit(){
 }
 
 function closeSwipe(shell){
-  shell.classList.remove("revealed-left","revealed-right");
+  shell.classList.remove("revealed-left","swiping-left");
   const row=shell.querySelector(".todo-item");
   if(row)row.style.transform="";
 }
 
 function closeOtherSwipes(current){
-  document.querySelectorAll(".todo-shell.revealed-left,.todo-shell.revealed-right").forEach(shell=>{
+  document.querySelectorAll(".todo-shell.revealed-left").forEach(shell=>{
     if(shell!==current)closeSwipe(shell);
   });
 }
@@ -147,7 +140,7 @@ function swipe(shell){
     sy=t.clientY;
     moving=false;
     shell.dataset.suppressClick="0";
-    startOffset=shell.classList.contains("revealed-left")?-92:shell.classList.contains("revealed-right")?92:0;
+    startOffset=shell.classList.contains("revealed-left")?-92:0;
   },{passive:true});
 
   row.addEventListener("touchmove",ev=>{
@@ -163,7 +156,8 @@ function swipe(shell){
     shell.dataset.suppressClick="1";
     ev.preventDefault();
 
-    const offset=Math.max(-92,Math.min(92,startOffset+dx));
+    const offset=Math.max(-92,Math.min(0,startOffset+dx));
+    shell.classList.toggle("swiping-left",offset<0);
     row.style.transform=`translateX(${offset}px)`;
   },{passive:false});
 
@@ -171,7 +165,7 @@ function swipe(shell){
     if(blocked)return;
 
     if(!moving){
-      if(shell.classList.contains("revealed-left")||shell.classList.contains("revealed-right")){
+      if(shell.classList.contains("revealed-left")){
         closeSwipe(shell);
         shell.dataset.suppressClick="1";
         setTimeout(()=>shell.dataset.suppressClick="0",100);
@@ -182,14 +176,11 @@ function swipe(shell){
     const dx=ev.changedTouches[0].clientX-sx;
     const finalOffset=startOffset+dx;
 
-    shell.classList.remove("revealed-left","revealed-right");
+    shell.classList.remove("revealed-left","swiping-left");
 
     if(finalOffset<=-46){
       shell.classList.add("revealed-left");
       row.style.transform="translateX(-92px)";
-    }else if(finalOffset>=46){
-      shell.classList.add("revealed-right");
-      row.style.transform="translateX(92px)";
     }else{
       row.style.transform="";
     }

@@ -1,1 +1,1 @@
-futari-todo v20 completed opacity fix
+futari-todo v22 left swipe only
