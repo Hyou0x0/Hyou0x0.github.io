@@ -94,3 +94,11 @@ Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→autho
 - 新規追加はFirebaseへの保存完了後に「保存済み」と表示
 - 保存失敗時はエラーコードを画面へ表示し、入力文字を復元
 - 旧Firestore復元機能は含まない
+
+
+## UI v13
+
+- Realtime Database URLを実在するDBへ修正
+- 修正前: `https://todo-f9789-80f29-default-rtdb.firebaseio.com/`
+- 修正後: `https://todo-f9789-default-rtdb.firebaseio.com/`
+- Safariとホーム画面アプリが同じ共有DBを参照するよう修正
