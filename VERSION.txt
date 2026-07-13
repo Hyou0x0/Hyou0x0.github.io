@@ -1,1 +1,1 @@
-futari-todo v22 left swipe only
+futari-todo v23 vertical drag only

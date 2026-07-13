@@ -456,3 +456,17 @@ button,input{font:inherit}
 .todo-shell.revealed-left .swipe-action-delete{
   display:flex !important;
 }
+
+/* v23: dragging is visually constrained to the vertical axis */
+.todo-dragging,
+.todo-ghost,
+.todo-chosen{
+  margin-left:0 !important;
+  margin-right:0 !important;
+}
+.todo-list{
+  touch-action:pan-y;
+}
+.drag-handle{
+  touch-action:none;
+}
