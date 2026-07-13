@@ -1,1 +1,1 @@
-futari-todo v16 editable tasks
+futari-todo v17 icon hard fix

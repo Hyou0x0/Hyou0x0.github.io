@@ -134,3 +134,12 @@ Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→autho
 - 編集内容はRealtime Databaseへ同期
 - 完了操作はチェックボックスまたは右スワイプの「完了」ボタンに統一
 - Escapeキー、背景タップでも編集をキャンセル可能
+
+
+## UI v17
+
+- Apple Touch Iconをルート直下にも配置
+- `apple-touch-icon-precomposed.png`も追加
+- Apple用アイコンを透過なしRGB PNGへ変換
+- アイコン参照URLに `?v=17` を付けてキャッシュを回避
+- manifest内アイコン参照も更新
