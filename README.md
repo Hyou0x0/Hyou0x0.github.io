@@ -54,3 +54,7 @@ git push
 - 復元ボタンの回転アニメーションを廃止
 - 復元処理を独立watchdogで12秒後に必ず停止
 - index.html / app.js / styles.css / firebase-config.jsをService Workerでネットワーク優先に変更
+
+
+## v7
+Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→author、priority→important、Timestamp→ミリ秒へ変換。
