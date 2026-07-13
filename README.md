@@ -191,3 +191,12 @@ Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→autho
 - 並び替え中の項目移動を上下方向だけに制限
 - 横方向へ指がずれても項目は左右に動かない
 - 並び替え判定も縦方向に固定
+
+
+## UI v24
+
+- Realtime Databaseルールが必須としている `important` を内部データに復活
+- お気に入りUI・重要フィルターは復活させない
+- 新規保存時は常に `important:false` を送信
+- Safari端末キャッシュ救出時も `important:false` を送信
+- 縦方向ドラッグ制限は維持

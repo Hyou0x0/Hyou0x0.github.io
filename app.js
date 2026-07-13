@@ -1,9 +1,9 @@
 
-import{initializeApp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";import{getDatabase,ref,push,set,update,remove,onValue,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";import{firebaseConfig}from"./firebase-config.js?v=23";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";import{getDatabase,ref,push,set,update,remove,onValue,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";import{firebaseConfig}from"./firebase-config.js?v=24";
 const S={USER:"futariTodo.user.v2",FILTER:"futariTodo.filter.v2",COLLAPSED:"futariTodo.collapsed.v2",CACHE:"futariTodo.cache.v2"},GAP=1024,USERS=new Set(["まさぴ","ゆなぴ"]),q=s=>document.querySelector(s),qa=s=>[...document.querySelectorAll(s)];
 const e={status:q("#syncStatus"),chooser:q("#userChooser"),change:q("#changeUserButton"),filters:qa("[data-filter]"),active:q("#activeList"),done:q("#completedList"),activeCount:q("#activeCount"),doneCount:q("#completedCount"),activeEmpty:q("#activeEmpty"),doneEmpty:q("#completedEmpty"),toggle:q("#completedToggle"),doneBody:q("#completedBody"),chevron:q("#completedChevron"),form:q("#todoForm"),input:q("#todoInput"),add:q("#addButton"),template:q("#todoTemplate"),editDialog:q("#editDialog"),editForm:q("#editForm"),editInput:q("#editInput"),editCancel:q("#editCancelButton"),editSave:q("#editSaveButton")};
 let firebaseApp=null;const valid=v=>USERS.has(v)?v:"";const st={user:valid(localStorage.getItem(S.USER)),filter:(()=>{const f=localStorage.getItem(S.FILTER)||"all";return["まさぴ","ゆなぴ","important"].includes(f)?"all":f})(),collapsed:localStorage.getItem(S.COLLAPSED)==="1",todos:new Map,db:null,authUser:null,connected:false,serverLoaded:false,rescueAttempted:false,editingId:null,sortA:null,sortD:null};
-function status(t,s){e.status.textContent=t;e.status.dataset.state=s}function norm(id,v={}){return{id,text:String(v.text||"").slice(0,160),done:!!v.done,author:USERS.has(v.author)?v.author:"不明",order:Number.isFinite(+v.order)?+v.order:0,createdAt:+v.createdAt||0}}function cache(){try{localStorage.setItem(S.CACHE,JSON.stringify([...st.todos.values()]))}catch{}}function load(){try{const raw=localStorage.getItem(S.CACHE)||localStorage.getItem("todoCache_v1")||localStorage.getItem("futariTodo.cache.v1")||"[]";const a=JSON.parse(raw);if(Array.isArray(a))for(const x of a)if(x?.id)st.todos.set(x.id,norm(x.id,x));if(st.todos.size)status(`端末内の${st.todos.size}件を表示中`,"loading")}catch{}return st.todos.size}
+function status(t,s){e.status.textContent=t;e.status.dataset.state=s}function norm(id,v={}){return{id,text:String(v.text||"").slice(0,160),done:!!v.done,important:!!v.important,author:USERS.has(v.author)?v.author:"不明",order:Number.isFinite(+v.order)?+v.order:0,createdAt:+v.createdAt||0}}function cache(){try{localStorage.setItem(S.CACHE,JSON.stringify([...st.todos.values()]))}catch{}}function load(){try{const raw=localStorage.getItem(S.CACHE)||localStorage.getItem("todoCache_v1")||localStorage.getItem("futariTodo.cache.v1")||"[]";const a=JSON.parse(raw);if(Array.isArray(a))for(const x of a)if(x?.id)st.todos.set(x.id,norm(x.id,x));if(st.todos.size)status(`端末内の${st.todos.size}件を表示中`,"loading")}catch{}return st.todos.size}
 function otherUser(){return st.user==="まさぴ"?"ゆなぴ":st.user==="ゆなぴ"?"まさぴ":""}
 function list(done){return[...st.todos.values()].filter(x=>x.done===done).filter(x=>{if(st.filter==="all")return true;if(st.filter==="self")return !!st.user&&x.author===st.user;if(st.filter==="other")return !!otherUser()&&x.author===otherUser();return true}).sort((a,b)=>a.order-b.order||a.createdAt-b.createdAt)}
 function render(){e.filters.forEach(b=>b.classList.toggle("active",b.dataset.filter===st.filter));e.chooser.hidden=!!st.user;e.input.disabled=e.add.disabled=!st.user;e.doneBody.hidden=st.collapsed;e.chevron.textContent=st.collapsed?"▸":"▾";const a=list(false),d=list(true);patch(e.active,a);patch(e.done,d);e.activeCount.textContent=a.length;e.doneCount.textContent=d.length;e.activeEmpty.hidden=!!a.length;e.doneEmpty.hidden=!!d.length;sortables()}
@@ -48,7 +48,7 @@ async function move(ul,id){if(!st.db)return;const ids=[...ul.children].map(n=>n.
 function next(done){const a=[...st.todos.values()].filter(x=>x.done===done);return a.length?Math.max(...a.map(x=>x.order||0))+GAP:GAP}
 async function add(text){
   const r=push(ref(st.db,"todos"));
-  const v={text,done:false,author:st.user,order:next(false),createdAt:Date.now(),updatedAt:serverTimestamp(),createdBy:st.authUser.uid};
+  const v={text,done:false,important:false,author:st.user,order:next(false),createdAt:Date.now(),updatedAt:serverTimestamp(),createdBy:st.authUser.uid};
   st.todos.set(r.key,norm(r.key,v));cache();render();status("保存中","syncing");
   try{
     await set(r,v);
@@ -202,6 +202,7 @@ async function rescueLocalTodos(){
     payload[`todos/${item.id}`]={
       text:item.text,
       done:!!item.done,
+      important:false,
       author:item.author,
       order:Number.isFinite(+item.order)?+item.order:GAP,
       createdAt:Number.isFinite(+item.createdAt)&&+item.createdAt>0?+item.createdAt:Date.now(),

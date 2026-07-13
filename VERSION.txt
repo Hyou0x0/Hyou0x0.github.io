@@ -1,1 +1,1 @@
-futari-todo v23 vertical drag only
+futari-todo v24 save validation fix
