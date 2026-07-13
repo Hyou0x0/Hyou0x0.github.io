@@ -1,1 +1,1 @@
-futari-todo v11 verified
+futari-todo v12 shared sync rescue

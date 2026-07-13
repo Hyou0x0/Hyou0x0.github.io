@@ -84,3 +84,13 @@ Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→autho
 - 匿名認証、接続状態、タスク取得の各失敗を画面へ表示
 - 12秒間データ応答がない場合も状態を表示
 - Service Workerは安全に登録解除し、Realtime Databaseを常に正とする
+
+
+## UI v12（共有同期・端末データ救出版）
+
+- 「同期済み」を接続状態だけでなく共有タスク件数つきで表示
+- Safari側のlocalStorageにだけ残ったタスクを、共有Realtime Databaseが空のとき一度だけ救出
+- 初回の空スナップショットで端末キャッシュを消さない
+- 新規追加はFirebaseへの保存完了後に「保存済み」と表示
+- 保存失敗時はエラーコードを画面へ表示し、入力文字を復元
+- 旧Firestore復元機能は含まない
