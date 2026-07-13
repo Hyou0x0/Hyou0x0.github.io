@@ -22,9 +22,10 @@ async function migrateFromFirestore(app,{force=false}={}){
   try{
     e.recover?.classList.add("is-busy");
     status("旧Firestoreを確認中","syncing");
-    const fs=await import("https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js");
+    const withTimeout=(promise,ms,label)=>Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(Object.assign(new Error(label),{code:"timeout"})),ms))]);
+    const fs=await withTimeout(import("https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js"),8000,"Firestore SDK timeout");
     const fdb=fs.getFirestore(app);
-    const snap=await fs.getDocs(fs.collection(fdb,"todos"));
+    const snap=await withTimeout(fs.getDocs(fs.collection(fdb,"todos")),10000,"Firestore read timeout");
     if(snap.empty){
       if(force) status("旧Firestoreにタスクが見つかりません","offline");
       localStorage.setItem(S.MIGRATED,"1");
@@ -90,4 +91,4 @@ function connect(){
     },err=>{console.error(err);status(`同期データ取得失敗: ${err.code||"unknown"}`,"offline")})
   })
 }
-e.form.addEventListener("submit",async v=>{v.preventDefault();const t=e.input.value.trim();if(!t||!st.db||!st.user||!st.authUser)return;e.input.value="";try{await add(t)}catch{e.input.value=t}});qa("[data-user]").forEach(b=>b.addEventListener("click",()=>{st.user=valid(b.dataset.user);localStorage.setItem(S.USER,st.user);render();e.input.focus()}));e.change.addEventListener("click",()=>{st.user="";localStorage.removeItem(S.USER);render()});e.recover?.addEventListener("click",async()=>{localStorage.removeItem(S.MIGRATED);if(!firebaseApp||!st.authUser){status("Firebase認証待ち","syncing");return}await migrateFromFirestore(firebaseApp,{force:true})});e.filters.forEach(b=>b.addEventListener("click",()=>{st.filter=b.dataset.filter;localStorage.setItem(S.FILTER,st.filter);render()}));e.toggle.addEventListener("click",()=>{st.collapsed=!st.collapsed;localStorage.setItem(S.COLLAPSED,st.collapsed?"1":"0");render()});window.addEventListener("online",()=>status("再同期中","syncing"));window.addEventListener("offline",()=>status("オフライン・端末キャッシュ","offline"));if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});load();render();connect();
+e.form.addEventListener("submit",async v=>{v.preventDefault();const t=e.input.value.trim();if(!t||!st.db||!st.user||!st.authUser)return;e.input.value="";try{await add(t)}catch{e.input.value=t}});qa("[data-user]").forEach(b=>b.addEventListener("click",()=>{st.user=valid(b.dataset.user);localStorage.setItem(S.USER,st.user);render();e.input.focus()}));e.change.addEventListener("click",()=>{st.user="";localStorage.removeItem(S.USER);render()});e.recover?.addEventListener("click",async()=>{if(e.recover.classList.contains("is-busy"))return;localStorage.removeItem(S.MIGRATED);if(!firebaseApp||!st.authUser){status("Firebase認証待ち","syncing");setTimeout(()=>{if(!st.authUser)status("Firebase認証に接続できません","offline")},8000);return}await migrateFromFirestore(firebaseApp,{force:true})});e.filters.forEach(b=>b.addEventListener("click",()=>{st.filter=b.dataset.filter;localStorage.setItem(S.FILTER,st.filter);render()}));e.toggle.addEventListener("click",()=>{st.collapsed=!st.collapsed;localStorage.setItem(S.COLLAPSED,st.collapsed?"1":"0");render()});window.addEventListener("online",()=>status("再同期中","syncing"));window.addEventListener("offline",()=>status("オフライン・端末キャッシュ","offline"));if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});load();render();connect();
