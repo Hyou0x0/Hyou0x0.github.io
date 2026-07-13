@@ -102,3 +102,14 @@ Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→autho
 - 修正前: `https://todo-f9789-80f29-default-rtdb.firebaseio.com/`
 - 修正後: `https://todo-f9789-default-rtdb.firebaseio.com/`
 - Safariとホーム画面アプリが同じ共有DBを参照するよう修正
+
+
+## UI v14
+
+- 左スワイプは即削除せず「削除」ボタンを表示
+- 右スワイプは即完了せず「完了／未完了」ボタンを表示
+- 表示された操作ボタンを押した時だけ処理を実行
+- 別の行を触ると、開いていたスワイプ操作を閉じる
+- iPhoneホーム画面用の180×180 Apple Touch Iconを追加
+- faviconを追加
+- manifestのアイコン定義を再整理

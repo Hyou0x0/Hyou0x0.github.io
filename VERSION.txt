@@ -1,1 +1,1 @@
-futari-todo v13 correct realtime database URL
+futari-todo v14 swipe action buttons + icon fix
