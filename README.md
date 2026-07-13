@@ -38,3 +38,7 @@ git push
 - Realtime Databaseが空の場合、旧Firestoreのtodosを初回だけ自動移行
 - 旧localStorageキャッシュキーも読み込み
 - オフライン表示状態のバグを修正
+
+
+## 復元ボタン
+右上の ↻ を押すと、旧Firestoreの todos を強制再検索します。復元失敗時は画面にFirebaseエラーコードを表示します。
