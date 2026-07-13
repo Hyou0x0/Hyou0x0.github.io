@@ -1,1 +1,1 @@
-futari-todo v19 clean layout stylesheet
+futari-todo v20 completed opacity fix
