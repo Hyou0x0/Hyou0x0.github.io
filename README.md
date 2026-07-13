@@ -1,0 +1,25 @@
+
+# ふたりToDo Realtime Database版
+
+1. Firebase ConsoleでRealtime Databaseを作成する。
+2. 表示されたURLを `firebase-config.js` の `databaseURL` に貼る。
+3. Realtime Databaseのルールへ `database.rules.json` の内容を貼って公開する。
+4. Authenticationで匿名ログインを有効にする。
+5. このフォルダの中身を `Hyou0x0.github.io` のルートへ置く。
+
+## 更新
+```sh
+git add .
+git commit -m "Rebuild with Realtime Database"
+git push
+```
+
+## 高速化内容
+- 起動直後はlocalStorageキャッシュを表示
+- Firebase接続を画面表示の条件にしない
+- DOM要素を再利用して差分配置
+- SortableJSは一度だけ初期化
+- 並び替えは移動した1件のみ書き込み
+- 追加・チェック・削除は先に画面へ反映
+- Service Workerでアプリ本体をキャッシュ
+- 名前は端末側だけに保存

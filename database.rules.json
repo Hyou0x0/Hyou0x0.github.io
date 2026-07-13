@@ -1,0 +1,2 @@
+
+{"rules":{".read":false,".write":false,"todos":{".read":"auth != null","$todoId":{".write":"auth != null",".validate":"newData.hasChildren(['text','done','important','author','order','createdAt'])","text":{".validate":"newData.isString() && newData.val().length > 0 && newData.val().length <= 160"},"done":{".validate":"newData.isBoolean()"},"important":{".validate":"newData.isBoolean()"},"author":{".validate":"newData.val() === 'まさぴ' || newData.val() === 'ゆなぴ'"},"order":{".validate":"newData.isNumber()"},"createdAt":{".validate":"newData.isNumber()"}}}}}
