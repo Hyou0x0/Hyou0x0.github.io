@@ -75,10 +75,12 @@ Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→autho
 - Realtime Databaseだけを使用する通常運用版へ整理
 
 
-## UI v10 の変更
+## UI v11（ホーム画面アプリ同期・検証版）
 
-- Safariとホーム画面アプリで保存領域が分かれても、Realtime Databaseから同じ共有タスクを再取得
-- Service Workerを解除し、古いアプリコード・キャッシュの残留を防止
-- CSS / JavaScript / manifestにバージョン番号を付与
-- ホーム画面アプリの起動・復帰・オンライン復帰時にFirebase接続を再開
-- 既存の端末キャッシュは、サーバー同期までの仮表示としてのみ使用
+- v10で失敗していたCSS / JS / manifestのバージョン付与を修正
+- `caches` 未定義時にJavaScriptが停止する問題を修正
+- Firebase接続より前にキャッシュ削除処理を実行しない構造へ変更
+- 不要な `goOffline()` / `goOnline()` 強制切り替えを廃止
+- 匿名認証、接続状態、タスク取得の各失敗を画面へ表示
+- 12秒間データ応答がない場合も状態を表示
+- Service Workerは安全に登録解除し、Realtime Databaseを常に正とする
