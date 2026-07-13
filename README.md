@@ -48,3 +48,9 @@ git push
 - Firestore復元処理に10秒タイムアウトを追加
 - 復元ボタンの無限回転を防止
 - 認証待ちも8秒でエラー表示
+
+
+## v6
+- 復元ボタンの回転アニメーションを廃止
+- 復元処理を独立watchdogで12秒後に必ず停止
+- index.html / app.js / styles.css / firebase-config.jsをService Workerでネットワーク優先に変更
