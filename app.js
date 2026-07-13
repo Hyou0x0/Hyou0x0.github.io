@@ -1,11 +1,11 @@
 
-import{initializeApp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";import{getDatabase,ref,push,set,update,remove,onValue,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";import{firebaseConfig}from"./firebase-config.js?v=14";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";import{getDatabase,ref,push,set,update,remove,onValue,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";import{firebaseConfig}from"./firebase-config.js?v=16";
 const S={USER:"futariTodo.user.v2",FILTER:"futariTodo.filter.v2",COLLAPSED:"futariTodo.collapsed.v2",CACHE:"futariTodo.cache.v2"},GAP=1024,USERS=new Set(["まさぴ","ゆなぴ"]),q=s=>document.querySelector(s),qa=s=>[...document.querySelectorAll(s)];
-const e={status:q("#syncStatus"),chooser:q("#userChooser"),change:q("#changeUserButton"),filters:qa("[data-filter]"),active:q("#activeList"),done:q("#completedList"),activeCount:q("#activeCount"),doneCount:q("#completedCount"),activeEmpty:q("#activeEmpty"),doneEmpty:q("#completedEmpty"),toggle:q("#completedToggle"),doneBody:q("#completedBody"),chevron:q("#completedChevron"),form:q("#todoForm"),input:q("#todoInput"),add:q("#addButton"),template:q("#todoTemplate")};
-let firebaseApp=null;const valid=v=>USERS.has(v)?v:"";const st={user:valid(localStorage.getItem(S.USER)),filter:(()=>{const f=localStorage.getItem(S.FILTER)||"all";return["まさぴ","ゆなぴ"].includes(f)?"all":f})(),collapsed:localStorage.getItem(S.COLLAPSED)==="1",todos:new Map,db:null,authUser:null,connected:false,serverLoaded:false,rescueAttempted:false,sortA:null,sortD:null};
-function status(t,s){e.status.textContent=t;e.status.dataset.state=s}function norm(id,v={}){return{id,text:String(v.text||"").slice(0,160),done:!!v.done,important:!!v.important,author:USERS.has(v.author)?v.author:"不明",order:Number.isFinite(+v.order)?+v.order:0,createdAt:+v.createdAt||0}}function cache(){try{localStorage.setItem(S.CACHE,JSON.stringify([...st.todos.values()]))}catch{}}function load(){try{const raw=localStorage.getItem(S.CACHE)||localStorage.getItem("todoCache_v1")||localStorage.getItem("futariTodo.cache.v1")||"[]";const a=JSON.parse(raw);if(Array.isArray(a))for(const x of a)if(x?.id)st.todos.set(x.id,norm(x.id,x));if(st.todos.size)status(`端末内の${st.todos.size}件を表示中`,"loading")}catch{}return st.todos.size}
+const e={status:q("#syncStatus"),chooser:q("#userChooser"),change:q("#changeUserButton"),filters:qa("[data-filter]"),active:q("#activeList"),done:q("#completedList"),activeCount:q("#activeCount"),doneCount:q("#completedCount"),activeEmpty:q("#activeEmpty"),doneEmpty:q("#completedEmpty"),toggle:q("#completedToggle"),doneBody:q("#completedBody"),chevron:q("#completedChevron"),form:q("#todoForm"),input:q("#todoInput"),add:q("#addButton"),template:q("#todoTemplate"),editDialog:q("#editDialog"),editForm:q("#editForm"),editInput:q("#editInput"),editCancel:q("#editCancelButton"),editSave:q("#editSaveButton")};
+let firebaseApp=null;const valid=v=>USERS.has(v)?v:"";const st={user:valid(localStorage.getItem(S.USER)),filter:(()=>{const f=localStorage.getItem(S.FILTER)||"all";return["まさぴ","ゆなぴ","important"].includes(f)?"all":f})(),collapsed:localStorage.getItem(S.COLLAPSED)==="1",todos:new Map,db:null,authUser:null,connected:false,serverLoaded:false,rescueAttempted:false,editingId:null,sortA:null,sortD:null};
+function status(t,s){e.status.textContent=t;e.status.dataset.state=s}function norm(id,v={}){return{id,text:String(v.text||"").slice(0,160),done:!!v.done,author:USERS.has(v.author)?v.author:"不明",order:Number.isFinite(+v.order)?+v.order:0,createdAt:+v.createdAt||0}}function cache(){try{localStorage.setItem(S.CACHE,JSON.stringify([...st.todos.values()]))}catch{}}function load(){try{const raw=localStorage.getItem(S.CACHE)||localStorage.getItem("todoCache_v1")||localStorage.getItem("futariTodo.cache.v1")||"[]";const a=JSON.parse(raw);if(Array.isArray(a))for(const x of a)if(x?.id)st.todos.set(x.id,norm(x.id,x));if(st.todos.size)status(`端末内の${st.todos.size}件を表示中`,"loading")}catch{}return st.todos.size}
 function otherUser(){return st.user==="まさぴ"?"ゆなぴ":st.user==="ゆなぴ"?"まさぴ":""}
-function list(done){return[...st.todos.values()].filter(x=>x.done===done).filter(x=>{if(st.filter==="all")return true;if(st.filter==="important")return x.important;if(st.filter==="self")return !!st.user&&x.author===st.user;if(st.filter==="other")return !!otherUser()&&x.author===otherUser();return true}).sort((a,b)=>a.order-b.order||a.createdAt-b.createdAt)}
+function list(done){return[...st.todos.values()].filter(x=>x.done===done).filter(x=>{if(st.filter==="all")return true;if(st.filter==="self")return !!st.user&&x.author===st.user;if(st.filter==="other")return !!otherUser()&&x.author===otherUser();return true}).sort((a,b)=>a.order-b.order||a.createdAt-b.createdAt)}
 function render(){e.filters.forEach(b=>b.classList.toggle("active",b.dataset.filter===st.filter));e.chooser.hidden=!!st.user;e.input.disabled=e.add.disabled=!st.user;e.doneBody.hidden=st.collapsed;e.chevron.textContent=st.collapsed?"▸":"▾";const a=list(false),d=list(true);patch(e.active,a);patch(e.done,d);e.activeCount.textContent=a.length;e.doneCount.textContent=d.length;e.activeEmpty.hidden=!!a.length;e.doneEmpty.hidden=!!d.length;sortables()}
 function patch(ul,items){const old=new Map([...ul.children].map(n=>[n.dataset.id,n.getBoundingClientRect()])),want=new Set(items.map(x=>x.id));[...ul.children].forEach(n=>{if(!want.has(n.dataset.id))n.remove()});items.forEach((x,i)=>{let n=ul.querySelector(`[data-id="${CSS.escape(x.id)}"]`);if(!n)n=create(x);else updateRow(n,x);const at=ul.children[i];if(at!==n)ul.insertBefore(n,at||null)});requestAnimationFrame(()=>[...ul.children].forEach(n=>{const o=old.get(n.dataset.id);if(!o)return;const y=o.top-n.getBoundingClientRect().top;if(y)n.animate([{transform:`translateY(${y}px)`},{transform:"translateY(0)"}],{duration:210,easing:"cubic-bezier(.2,.8,.2,1)"})}))}
 function create(x){
@@ -20,10 +20,8 @@ function create(x){
       closeSwipe(shell);
       return;
     }
-    done(x.id,!st.todos.get(x.id)?.done);
+    openEdit(x.id);
   });
-
-  shell.querySelector(".important-button").addEventListener("click",()=>important(x.id));
 
   shell.querySelector(".delete-action-button").addEventListener("click",async()=>{
     closeSwipe(shell);
@@ -50,9 +48,6 @@ function updateRow(shell,x){
   shell.querySelector(".todo-check").checked=x.done;
   shell.querySelector(".todo-text").textContent=x.text;
   shell.querySelector(".author-badge").textContent=x.author;
-  const b=shell.querySelector(".important-button");
-  b.textContent=x.important?"★":"☆";
-  b.classList.toggle("is-important",x.important);
   shell.querySelector(".complete-action-button").textContent=x.done?"未完了":"完了";
 }
 function sortables(){if(!window.Sortable)return;if(!st.sortA)st.sortA=new Sortable(e.active,{animation:180,handle:".drag-handle",delay:0,touchStartThreshold:2,ghostClass:"todo-ghost",chosenClass:"todo-chosen",dragClass:"todo-dragging",onEnd:v=>move(e.active,v.item.dataset.id)});if(!st.sortD)st.sortD=new Sortable(e.done,{animation:180,handle:".drag-handle",delay:0,touchStartThreshold:2,ghostClass:"todo-ghost",chosenClass:"todo-chosen",dragClass:"todo-dragging",onEnd:v=>move(e.done,v.item.dataset.id)})}
@@ -60,7 +55,7 @@ async function move(ul,id){if(!st.db)return;const ids=[...ul.children].map(n=>n.
 function next(done){const a=[...st.todos.values()].filter(x=>x.done===done);return a.length?Math.max(...a.map(x=>x.order||0))+GAP:GAP}
 async function add(text){
   const r=push(ref(st.db,"todos"));
-  const v={text,done:false,important:false,author:st.user,order:next(false),createdAt:Date.now(),updatedAt:serverTimestamp(),createdBy:st.authUser.uid};
+  const v={text,done:false,author:st.user,order:next(false),createdAt:Date.now(),updatedAt:serverTimestamp(),createdBy:st.authUser.uid};
   st.todos.set(r.key,norm(r.key,v));cache();render();status("保存中","syncing");
   try{
     await set(r,v);
@@ -70,8 +65,62 @@ async function add(text){
   }
 }
 async function done(id,val){const x=st.todos.get(id);if(!x||!st.db)return;const old={...x};x.done=val;x.order=next(val);cache();render();try{await update(ref(st.db,`todos/${id}`),{done:val,order:x.order,updatedAt:serverTimestamp()})}catch{st.todos.set(id,old);cache();render();status("更新失敗","offline")}}
-async function important(id){const x=st.todos.get(id);if(!x)return;const old=x.important;x.important=!old;cache();render();try{await update(ref(st.db,`todos/${id}`),{important:x.important,updatedAt:serverTimestamp()})}catch{x.important=old;cache();render()}}
 async function del(id){const x=st.todos.get(id);if(!x)return;st.todos.delete(id);cache();render();try{await remove(ref(st.db,`todos/${id}`))}catch{st.todos.set(id,x);cache();render();status("削除失敗","offline")}}
+
+function openEdit(id){
+  const item=st.todos.get(id);
+  if(!item)return;
+  closeOtherSwipes(null);
+  st.editingId=id;
+  e.editInput.value=item.text;
+  e.editDialog.hidden=false;
+  document.body.classList.add("dialog-open");
+  requestAnimationFrame(()=>{
+    e.editInput.focus();
+    e.editInput.setSelectionRange(e.editInput.value.length,e.editInput.value.length);
+  });
+}
+
+function closeEdit(){
+  st.editingId=null;
+  e.editDialog.hidden=true;
+  document.body.classList.remove("dialog-open");
+  e.editInput.value="";
+}
+
+async function saveEdit(){
+  const id=st.editingId;
+  const item=id?st.todos.get(id):null;
+  const text=e.editInput.value.trim();
+  if(!item)return closeEdit();
+  if(!text){
+    status("内容を入力してください","offline");
+    e.editInput.focus();
+    return;
+  }
+  if(text===item.text)return closeEdit();
+
+  const old=item.text;
+  item.text=text;
+  cache();
+  render();
+  status("編集内容を保存中","syncing");
+
+  try{
+    await update(ref(st.db,`todos/${id}`),{
+      text,
+      updatedAt:serverTimestamp()
+    });
+    closeEdit();
+    status(`編集を保存しました・共有${st.todos.size}件`,"online");
+  }catch(err){
+    item.text=old;
+    cache();
+    render();
+    showFatal("編集保存失敗",err);
+  }
+}
+
 function closeSwipe(shell){
   shell.classList.remove("revealed-left","revealed-right");
   const row=shell.querySelector(".todo-item");
@@ -89,7 +138,7 @@ function swipe(shell){
   let sx=0,sy=0,startOffset=0,moving=false,blocked=false;
 
   row.addEventListener("touchstart",ev=>{
-    blocked=!!ev.target.closest(".drag-handle,.important-button,.todo-check");
+    blocked=!!ev.target.closest(".drag-handle,.todo-check");
     if(blocked)return;
 
     closeOtherSwipes(shell);
@@ -162,7 +211,6 @@ async function rescueLocalTodos(){
     payload[`todos/${item.id}`]={
       text:item.text,
       done:!!item.done,
-      important:!!item.important,
       author:item.author,
       order:Number.isFinite(+item.order)?+item.order:GAP,
       createdAt:Number.isFinite(+item.createdAt)&&+item.createdAt>0?+item.createdAt:Date.now(),
@@ -263,7 +311,20 @@ function connect(){
     showFatal("Firebase初期化失敗",err);
   }
 }
-e.form.addEventListener("submit",async v=>{v.preventDefault();const t=e.input.value.trim();if(!t)return;if(!st.db||!st.authUser){status("Firebase接続待ち","offline");return}if(!st.user){status("利用者を選択してください","offline");return}e.input.value="";try{await add(t)}catch{e.input.value=t;e.input.focus()}});qa("[data-user]").forEach(b=>b.addEventListener("click",()=>{st.user=valid(b.dataset.user);localStorage.setItem(S.USER,st.user);render();e.input.focus()}));e.change.addEventListener("click",()=>{st.user="";localStorage.removeItem(S.USER);render()});e.filters.forEach(b=>b.addEventListener("click",()=>{st.filter=b.dataset.filter;localStorage.setItem(S.FILTER,st.filter);render()}));e.toggle.addEventListener("click",()=>{st.collapsed=!st.collapsed;localStorage.setItem(S.COLLAPSED,st.collapsed?"1":"0");render()});window.addEventListener("online",()=>status("再接続中","syncing"));
+e.form.addEventListener("submit",async v=>{v.preventDefault();const t=e.input.value.trim();if(!t)return;if(!st.db||!st.authUser){status("Firebase接続待ち","offline");return}if(!st.user){status("利用者を選択してください","offline");return}e.input.value="";try{await add(t)}catch{e.input.value=t;e.input.focus()}});qa("[data-user]").forEach(b=>b.addEventListener("click",()=>{st.user=valid(b.dataset.user);localStorage.setItem(S.USER,st.user);render();e.input.focus()}));e.change.addEventListener("click",()=>{st.user="";localStorage.removeItem(S.USER);render()});e.filters.forEach(b=>b.addEventListener("click",()=>{st.filter=b.dataset.filter;localStorage.setItem(S.FILTER,st.filter);render()}));e.toggle.addEventListener("click",()=>{st.collapsed=!st.collapsed;localStorage.setItem(S.COLLAPSED,st.collapsed?"1":"0");render()});
+e.editForm.addEventListener("submit",async ev=>{
+  ev.preventDefault();
+  await saveEdit();
+});
+e.editCancel.addEventListener("click",closeEdit);
+e.editDialog.addEventListener("click",ev=>{
+  if(ev.target.matches("[data-edit-cancel]"))closeEdit();
+});
+document.addEventListener("keydown",ev=>{
+  if(ev.key==="Escape"&&!e.editDialog.hidden)closeEdit();
+});
+
+window.addEventListener("online",()=>status("再接続中","syncing"));
 window.addEventListener("offline",()=>status("オフライン・端末キャッシュ","offline"));
 
 load();
