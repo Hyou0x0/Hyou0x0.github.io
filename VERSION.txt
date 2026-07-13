@@ -1,1 +1,1 @@
-futari-todo v18 completed layout fix
+futari-todo v19 clean layout stylesheet
