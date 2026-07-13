@@ -1,5 +1,5 @@
 
-import{initializeApp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";import{getDatabase,ref,push,set,update,remove,onValue,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";import{firebaseConfig}from"./firebase-config.js";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";import{getAuth,onAuthStateChanged,signInAnonymously}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";import{getDatabase,ref,push,set,update,remove,onValue,serverTimestamp,goOnline,goOffline}from"https://www.gstatic.com/firebasejs/12.6.0/firebase-database.js";import{firebaseConfig}from"./firebase-config.js";
 const S={USER:"futariTodo.user.v2",FILTER:"futariTodo.filter.v2",COLLAPSED:"futariTodo.collapsed.v2",CACHE:"futariTodo.cache.v2"},GAP=1024,USERS=new Set(["まさぴ","ゆなぴ"]),q=s=>document.querySelector(s),qa=s=>[...document.querySelectorAll(s)];
 const e={status:q("#syncStatus"),chooser:q("#userChooser"),change:q("#changeUserButton"),filters:qa("[data-filter]"),active:q("#activeList"),done:q("#completedList"),activeCount:q("#activeCount"),doneCount:q("#completedCount"),activeEmpty:q("#activeEmpty"),doneEmpty:q("#completedEmpty"),toggle:q("#completedToggle"),doneBody:q("#completedBody"),chevron:q("#completedChevron"),form:q("#todoForm"),input:q("#todoInput"),add:q("#addButton"),template:q("#todoTemplate")};
 let firebaseApp=null;const valid=v=>USERS.has(v)?v:"";const st={user:valid(localStorage.getItem(S.USER)),filter:(()=>{const f=localStorage.getItem(S.FILTER)||"all";return["まさぴ","ゆなぴ"].includes(f)?"all":f})(),collapsed:localStorage.getItem(S.COLLAPSED)==="1",todos:new Map,db:null,authUser:null,connected:false,sortA:null,sortD:null};
@@ -17,6 +17,11 @@ async function done(id,val){const x=st.todos.get(id);if(!x||!st.db)return;const 
 async function important(id){const x=st.todos.get(id);if(!x)return;const old=x.important;x.important=!old;cache();render();try{await update(ref(st.db,`todos/${id}`),{important:x.important,updatedAt:serverTimestamp()})}catch{x.important=old;cache();render()}}
 async function del(id){const x=st.todos.get(id);if(!x)return;st.todos.delete(id);cache();render();try{await remove(ref(st.db,`todos/${id}`))}catch{st.todos.set(id,x);cache();render();status("削除失敗","offline")}}
 function swipe(row,id){let sx=0,sy=0,m=false,blocked=false;row.addEventListener("touchstart",v=>{blocked=!!v.target.closest(".drag-handle,.important-button,.todo-check");if(blocked)return;const t=v.touches[0];sx=t.clientX;sy=t.clientY;m=false;row.dataset.suppressClick="0"},{passive:true});row.addEventListener("touchmove",v=>{if(blocked)return;const t=v.touches[0],dx=t.clientX-sx,dy=t.clientY-sy;if(Math.abs(dx)<12||Math.abs(dx)<=Math.abs(dy))return;m=true;row.dataset.suppressClick="1";v.preventDefault();const clamped=Math.max(-95,Math.min(95,dx));row.style.transform=`translateX(${clamped}px)`;row.classList.toggle("swiping-left",clamped<0);row.classList.toggle("swiping-right",clamped>0)},{passive:false});row.addEventListener("touchend",v=>{if(blocked||!m)return;const dx=v.changedTouches[0].clientX-sx;row.style.transform="";row.classList.remove("swiping-left","swiping-right");setTimeout(()=>row.dataset.suppressClick="0",120);if(dx>65){const x=st.todos.get(id);if(x)done(id,!x.done)}else if(dx<-65)del(id)});row.addEventListener("touchcancel",()=>{row.style.transform="";row.classList.remove("swiping-left","swiping-right");row.dataset.suppressClick="0"})}
+function resumeRealtime(){
+  if(!st.db)return;
+  try{goOffline(st.db)}catch{}
+  setTimeout(()=>{try{goOnline(st.db);status("再同期中","syncing")}catch{}},80);
+}
 function connect(){
   if(firebaseConfig.databaseURL.includes("PASTE_YOUR")){status("databaseURLを設定してください","offline");return}
   firebaseApp=initializeApp(firebaseConfig);const auth=getAuth(firebaseApp);st.db=getDatabase(firebaseApp);
@@ -35,4 +40,12 @@ function connect(){
     },err=>{console.error(err);status(`同期データ取得失敗: ${err.code||"unknown"}`,"offline")})
   })
 }
-e.form.addEventListener("submit",async v=>{v.preventDefault();const t=e.input.value.trim();if(!t||!st.db||!st.user||!st.authUser)return;e.input.value="";try{await add(t)}catch{e.input.value=t}});qa("[data-user]").forEach(b=>b.addEventListener("click",()=>{st.user=valid(b.dataset.user);localStorage.setItem(S.USER,st.user);render();e.input.focus()}));e.change.addEventListener("click",()=>{st.user="";localStorage.removeItem(S.USER);render()});e.filters.forEach(b=>b.addEventListener("click",()=>{st.filter=b.dataset.filter;localStorage.setItem(S.FILTER,st.filter);render()}));e.toggle.addEventListener("click",()=>{st.collapsed=!st.collapsed;localStorage.setItem(S.COLLAPSED,st.collapsed?"1":"0");render()});window.addEventListener("online",()=>status("再同期中","syncing"));window.addEventListener("offline",()=>status("オフライン・端末キャッシュ","offline"));if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});load();render();connect();
+e.form.addEventListener("submit",async v=>{v.preventDefault();const t=e.input.value.trim();if(!t||!st.db||!st.user||!st.authUser)return;e.input.value="";try{await add(t)}catch{e.input.value=t}});qa("[data-user]").forEach(b=>b.addEventListener("click",()=>{st.user=valid(b.dataset.user);localStorage.setItem(S.USER,st.user);render();e.input.focus()}));e.change.addEventListener("click",()=>{st.user="";localStorage.removeItem(S.USER);render()});e.filters.forEach(b=>b.addEventListener("click",()=>{st.filter=b.dataset.filter;localStorage.setItem(S.FILTER,st.filter);render()}));e.toggle.addEventListener("click",()=>{st.collapsed=!st.collapsed;localStorage.setItem(S.COLLAPSED,st.collapsed?"1":"0");render()});window.addEventListener("online",()=>{status("再同期中","syncing");resumeRealtime()});
+window.addEventListener("offline",()=>status("オフライン・端末キャッシュ","offline"));
+window.addEventListener("pageshow",()=>resumeRealtime());
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")resumeRealtime()});
+if("serviceWorker"in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs=>Promise.all(regs.map(r=>r.unregister()))).catch(()=>{});
+  caches?.keys?.().then(keys=>Promise.all(keys.map(key=>caches.delete(key)))).catch(()=>{});
+}
+load();render();connect();

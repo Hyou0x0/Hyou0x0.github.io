@@ -73,3 +73,12 @@ Firestore SDKを使わずREST APIで旧todosを直接取得。authorName→autho
 - 旧Firestoreデータの復元・移行機能を完全に削除
 - 右上の復元ボタン（↻）を削除
 - Realtime Databaseだけを使用する通常運用版へ整理
+
+
+## UI v10 の変更
+
+- Safariとホーム画面アプリで保存領域が分かれても、Realtime Databaseから同じ共有タスクを再取得
+- Service Workerを解除し、古いアプリコード・キャッシュの残留を防止
+- CSS / JavaScript / manifestにバージョン番号を付与
+- ホーム画面アプリの起動・復帰・オンライン復帰時にFirebase接続を再開
+- 既存の端末キャッシュは、サーバー同期までの仮表示としてのみ使用
