@@ -32,3 +32,9 @@ git push
 - 右スワイプで完了／未完了
 - フィルターを「すべて・自分・相手・重要」に変更
 - 自分／相手は、この端末で選択中の利用者を基準に自動判定
+
+
+## v3 migration
+- Realtime Databaseが空の場合、旧Firestoreのtodosを初回だけ自動移行
+- 旧localStorageキャッシュキーも読み込み
+- オフライン表示状態のバグを修正
